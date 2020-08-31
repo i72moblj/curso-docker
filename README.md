@@ -8,6 +8,7 @@
   - [1.1 Introducción al curso](#11-introducción-al-curso)
   - [1.2 Introducción a Docker](#12-introducción-a-docker)
   - [1.3 Diferencia con máquinas virtuales](#13-diferencia-con-máquinas-virtuales)
+  - [1.4 Versiones de Docker](#14-versiones-de-docker)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -93,4 +94,32 @@ Esto presenta distintas ventajas:
 - ...
 
 Realmente, los contenedores se pueden utilizar en muchos ámbitos del mundo tecnológico, y seguramente también podríamos alcanzar la misma o parecida solución utilizando máquinas virtuales, pero el ahorro de recursos hace que los contenedores sea una opción muy interesante para distintas plataformas y entornos tecnológicos.
+
+## 1.4 Versiones de Docker
+
+A la hora de hacer este curso, disponemos de dos versiones de Docker:
+
+- *Docker CE (Docker Community Edition)*
+- *Docker EE (Docker Enterprise Edition)*
+
+La versión **Docker Community Edition** está pensada para desarrolladores y pequeñas empresas que necesitan este tipo de infraestructura.
+
+Tiene dos líneas de actualización:
+
+- *Stable*: Contiene la última versión estable
+- *Edge*: Contiene las últimas novedades pero que no es muy, muy estable y no es recomendable utilizarla en entornos de producción.
+
+La versión **Docker Enterprise Edition** está orientada para grandes infraestructuras donde vamos a necesitar soporte y una serie de herramientas más avanzadas, como herramientas gráficas, de soporte a la seguridad, ...
+
+A su vez tiene tres versiones distintas:
+
+- *Basic*
+- *Standard*
+- *Advanced*
+
+Cuanto más avanzada, más dinero cuesta y más cosas tiene, más ámbitos de soporte, más herramientas, ...
+
+Todo esto se puede consultar en la página oficial de [Docker](https://www.docker.com)
+
+Este curso está enfocado a la versión  Docker Community Edition, aunque todo se puede aplicar a la versión Docker Enterprise Edition.
 
