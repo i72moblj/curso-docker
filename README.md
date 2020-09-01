@@ -9,6 +9,7 @@
   - [1.2 Introducción a Docker](#12-introducción-a-docker)
   - [1.3 Diferencia con máquinas virtuales](#13-diferencia-con-máquinas-virtuales)
   - [1.4 Versiones de Docker](#14-versiones-de-docker)
+  - [1.5 Instalación de Docker en Debian 10 Buster](#15-instalación-de-docker-en-debian-10-buster)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -75,7 +76,7 @@ Entonces esto es lo que pretende solucionar Docker, que el entorno se pueda *con
 
 Vamos a ver que aunque la filosofía es parecida, la solución impuesta a nivel de infraestructura es bastante distinta.
 
-Una **máquina virtual** está compuesta básicamente por el hardware, el sistema operativo que tenemos por encima, por ejemplo GNU/Linux y luego un componente llamado hipervisor, que es el software de virtualización, por ejemplo VM-Ware, VirtualBox, ... y lo que hace este hipervisor es que mantiene máquinas virtuales totalmente independientes. Cada máquina virtual está compuesta de su propio sistema operativo huesped, luego tiene su propio conjunto de librerías, binarios, ... y encima se ejecutan las aplicaciones. 
+Una **máquina virtual** está compuesta básicamente por el hardware, el sistema operativo que tenemos por encima, por ejemplo GNU/Linux y luego un componente llamado hipervisor, que es el software de virtualización, por ejemplo VMware, VirtualBox, ... y lo que hace este hipervisor es que mantiene máquinas virtuales totalmente independientes. Cada máquina virtual está compuesta de su propio sistema operativo huesped, luego tiene su propio conjunto de librerías, binarios, ... y encima se ejecutan las aplicaciones. 
 
 Entonces vemos que las máquinas virtuales tienen todas una estructura muy similar, sistema operativo, los componentes que lleve y aplicaciones. Es decir que son componentes monolíticos totalmente independientes unos de otros, con lo cual cada uno tiene su propia memoria, sus propios procesadores y sus propios rescursos de la máquina donde se aloja.
 
@@ -123,3 +124,75 @@ Todo esto se puede consultar en la página oficial de [Docker](https://www.docke
 
 Este curso está enfocado a la versión  Docker Community Edition, aunque todo se puede aplicar a la versión Docker Enterprise Edition.
 
+## 1.5 Instalación de Docker en Debian 10 Buster
+
+Para realizar la instalación de Docker para los diferentes sistemas operativos, lo mejor es seguir las instrucciones que aparecen en la documentación oficial en [https://docs.docker.com](https://docs.docker.com)
+
+En este caso, vamos a seguir las instrucciones para la instalación de Docker en Debian 10 Buster, para ello acudimos a la documentación oficial de Docker [Install Docker Engine on Debian](https://docs.docker.com/engine/install/debian/)
+
+Actualizar los repositorios del sistema e instalar los paquetes necesarios
+
+```console
+$ sudo apt-get update
+
+$ sudo apt-get install \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    gnupg-agent \
+    software-properties-common
+```
+
+Añadir la clave GPG oficial de Docker
+
+```console
+$ curl -fsSL https://download.docker.com/linux/debian/gpg | sudo apt-key add -
+```
+
+Verificar que tenemos la clave con el fingerprint `9DC8 5822 9FC7 DD38 854A E2D8 8D81 803C 0EBF CD88`, mostrando los últimos 8 caracteres de la fingerprint
+
+```console
+$ sudo apt-key fingerprint 0EBFCD88
+
+pub   4096R/0EBFCD88 2017-02-22
+      Key fingerprint = 9DC8 5822 9FC7 DD38 854A  E2D8 8D81 803C 0EBF CD88
+uid                  Docker Release (CE deb) <docker@docker.com>
+sub   4096R/F273FCD8 2017-02-22
+```
+
+Crear un nuevo archivo de repositorio para Docker
+
+```console
+$ sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
+```
+
+Actualizar los repositorios e instalamos la última versión de Docker Engine y containerd
+
+```console
+$ sudo apt-get update
+$ sudo apt-get install docker-ce docker-ce-cli containerd.io
+```
+
+Comprobar el estado del servicio Docker y que está enabled para que arranque el servicio al iniciar el sistema
+
+```consolesudo
+$ systemctl status docker
+
+● docker.service - Docker Application Container Engine
+   Loaded: loaded (/lib/systemd/system/docker.service; enabled; vendor preset: enabled)
+   Active: active (running) since Fri 2020-05-29 19:48:09 CEST; 2h 5min ago
+     Docs: https://docs.docker.com
+ Main PID: 4878 (dockerd)
+    Tasks: 26
+   Memory: 57.0M
+   CGroup: /system.slice/docker.service
+           └─4878 /usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock
+```
+
+Comprobar que lo tenemos funcionando
+
+```console
+$ sudo docker --version
+
+Docker version 19.03.11, build 42e35e61f3
+```
