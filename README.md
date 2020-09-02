@@ -11,6 +11,8 @@
   - [1.4 Versiones de Docker](#14-versiones-de-docker)
   - [1.5 Instalación de Docker en Debian 10 Buster](#15-instalación-de-docker-en-debian-10-buster)
   - [1.6 Arquitectura de Docker, imágenes, contenedores y daemons](#16-arquitectura-de-docker-imágenes-contenedores-y-daemons)
+- [SECCIÓN 2: Trabajar con contenedores](#sección-2-trabajar-con-contenedores)
+  - [2.1 Arrancar y parar Docker](#21-arrancar-y-parar-docker)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -220,3 +222,66 @@ Las imágenes, como veremos, están en local, se quedan en el servidor, pero rea
 
 En la instalación lo que hemos hecho ha sido instalar el Docker Host y el Docker Client y a partir de ahora lo que vamos a aprender es a crear contenedores a partir de imágenes ya hechas y cómo poder crear imágenes y subirlas y descargarlas a nuestro repositorio.
 
+# SECCIÓN 2: Trabajar con contenedores
+
+## 2.1 Arrancar y parar Docker
+
+En este capítulo vamos a ver cómo arrancar y para Docker.
+
+Si escribimos `docker` en la terminal y tabulamos dos veces, vemos que aparecen dos entradas:
+
+- *dockerd*: Es el demonio, el proceso background de docker, que como hemos comentado anteriormente, es uno de los componentes que forman parte de Docker.
+- *docker*: Es la herramienta cliente que vamos a utilizar durante todo el curso.
+
+En este capítulo vamos a hablar de *dockerd*, que es el demonio que permite arrancar los servicios y procesos de Docker.
+
+En Linux, para arrancar, reiniciar, parar y activar servicios, se utiliza `systemctl`.
+
+Para ver el estado del servicio Docker:
+
+```console
+$ sudo systemctl status docker
+
+● docker.service - Docker Application Container Engine
+   Loaded: loaded (/lib/systemd/system/docker.service; enabled; vendor preset: enabled)
+   Active: active (running) since Wed 2020-09-02 20:44:05 CEST; 1s ago
+     Docs: https://docs.docker.com
+ Main PID: 7879 (dockerd)
+    Tasks: 13
+   Memory: 45.8M
+   CGroup: /system.slice/docker.service
+           └─7879 /usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock
+
+sep 02 20:44:04 debian dockerd[7879]: time="2020-09-02T20:44:04.497536335+02:00" level=warning msg="Your kernel does not support swap memory limit"
+sep 02 20:44:04 debian dockerd[7879]: time="2020-09-02T20:44:04.497567139+02:00" level=warning msg="Your kernel does not support cgroup rt period"
+sep 02 20:44:04 debian dockerd[7879]: time="2020-09-02T20:44:04.497582095+02:00" level=warning msg="Your kernel does not support cgroup rt runtime"
+sep 02 20:44:04 debian dockerd[7879]: time="2020-09-02T20:44:04.497779946+02:00" level=info msg="Loading containers: start."
+sep 02 20:44:05 debian dockerd[7879]: time="2020-09-02T20:44:05.304249702+02:00" level=info msg="Default bridge (docker0) is assigned with an IP address 172.17.0.0/16. Daemon option --bip can be used to set a pr
+sep 02 20:44:05 debian dockerd[7879]: time="2020-09-02T20:44:05.493536735+02:00" level=info msg="Loading containers: done."
+sep 02 20:44:05 debian dockerd[7879]: time="2020-09-02T20:44:05.570044003+02:00" level=info msg="Docker daemon" commit=48a66213fe graphdriver(s)=overlay2 version=19.03.12
+sep 02 20:44:05 debian dockerd[7879]: time="2020-09-02T20:44:05.570243248+02:00" level=info msg="Daemon has completed initialization"
+sep 02 20:44:05 debian dockerd[7879]: time="2020-09-02T20:44:05.628974130+02:00" level=info msg="API listen on /var/run/docker.sock"
+sep 02 20:44:05 debian systemd[1]: Started Docker Application Container Engine.
+
+```
+
+En este caso se está ejecutando, pero si queremos arrancar el servicio de Docker:
+
+```console
+$ sudo systemctl start docker
+```
+
+Para pararlo:
+
+```console
+$ sudo systemctl stop docker
+```
+
+Además de arrancarlo, tenemos que activar el servicio de Docker. Eso es para que se inicie el servicio al iniciar el servidor (o computadora). Si sólo arrancamos el servicio, pero no lo activamos, al reiniciar el servidor, si comprobamos el estado del servicio veremos que está parado. Por eso hay que activarlo.
+
+```console
+$ sudo systemctl enable docker
+```
+
+**Ejercicio Práctico:**
+> Práctica 01 - Arrancar y parar los servicios Docker.pdf*
