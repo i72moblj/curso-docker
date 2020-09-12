@@ -14,6 +14,7 @@
 - [SECCIÓN 2: Trabajar con contenedores](#sección-2-trabajar-con-contenedores)
   - [2.1 Arrancar y parar Docker](#21-arrancar-y-parar-docker)
   - [2.2 Crear nuestro primer contenedor](#22-crear-nuestro-primer-contenedor)
+  - [2.3 Ver imágenes y contenedores](#23-ver-imágenes-y-contenedores)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -291,7 +292,7 @@ $ sudo systemctl enable docker
 
 Primero vamos a ver algunos comandos generales.
 
-> **Importante** Docker hay que ejecutarlo como root o con el usuario sudo.
+> **Importante:** Docker hay que ejecutarlo como root o con el usuario sudo.
 
 Para saber qué versión de Docker tenemos instalada:
 
@@ -363,7 +364,7 @@ Nos muestra información detallada sobre la estructura de nuestro docker, por ej
 Si ejecutamos `docker` a secas, sin indicar ninguna opción o comando, muestra la manera de usarlo, las opciones que tenemos disponibles y sus descripciones y los comandos disponibles que están divididos en comandos de gestión y comandos asociados y sus descripciones.
 
 ```console
-$ docker
+$ sudo docker
 
 Usage:	docker [OPTIONS] COMMAND
 
@@ -453,24 +454,16 @@ Commands:
 Run 'docker COMMAND --help' for more information on a command.
 ```
 
-
-
-
-Para obtener ayuda sobre un comando determinado:
+Podemos obtener ayuda sobre un comando determinado:
 
 ```console
-$ docker COMMAND --help
+$ sudo docker COMMAND --help
 ```
-
-
-
-
-
 
 Ahora vamos a crear nuestro primer contenedor. Y para crear un contenedor hay que crearlo a partir de una imagen
 
  ```console
-$ docker run IMAGE
+$ sudo docker run IMAGE
 ```
 
 En realidad, este comando lo primero que va a hacer es buscar esa imagen, primero en nuestro repositorio local, privado, que se crea automáticamente en el servidor al instalar Docker y, si no la encuentra, va a buscarla a [DockerHub](https://hub.docker.com) y la va a descargar a nuestro repositorio privado local (pull).
@@ -521,3 +514,248 @@ También vemos que le asigna un ID a la imagen, porque en docker casi todos los 
 Luego crea el contenedor y lo ejecuta mostrando el *Hello from Docker!*
 
 Y nos dice el proceso que ha seguido dockerd desde que se ejecuta el comando
+
+- El cliente docker ha contactado con el docker daemon, el dockerd
+- El dockerd ha hecho un pull, es decir, se ha traído la imagen hello-world de Docker Hub
+- El dockerd ha creado un nuevo contenedor a partir de esa imagen y lo ejecuta
+- El dockerd manda la salida del contenedor al cliente de docker y éste manda la salida al terminal
+
+## 2.3 Ver imágenes y contenedores
+
+Para listar las imágenes que tenemos en nuestro repositorio local
+
+```console
+$ sudo docker images
+
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+hello-world         latest              bf756fb1ae65        8 months ago        13.3kB
+```
+
+La información que nos da es muy sencilla:
+
+- el nombre del repositorio donde está, que es el mismo nombre de la imagen
+- el tag
+- el id de la imagen, que es un número hash que le asigna automáticamente
+- cuándo se creó esa imagen (no cuándo se descargó sino cuando la creó el vendor de la imagen)
+- y el tamaño
+
+> **Nota:** Puede crear confusión que el primer valor que aparece sea el nombre del repositorio y no el de la imagen, porque en realidad, un repositorio es un conjunto de imágenes y el nombre de las imágenes está formado por el par repositorio:tag, lo que pasa es que el nombre del repositorio y el de la imagen suele coincidir, además, por defecto, si el nombre de imagen no lleva tag en realidad se le aplica la tag latest.
+
+Estas imágenes están ahí porque, como se comentó en el apartado anterior, se han descargado de Docker Hub.
+
+Para mostrar los contenedores:
+
+```console
+$ sudo docker ps
+
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
+
+```
+
+Vemos que no nos muestra nada, y es porque este comando así, sin argumentos, me muestra los contenedores que se están ejecutando.
+
+El contenedor que hemos creado antes, lo hemos arrancado, se ha ejecutado y ha parado.
+
+Si queremos ver todos los contenedores, tanto los que se están ejecutando como los que están parados
+
+```console
+$ sudo docker ps -a
+
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS                  PORTS               NAMES
+453dd5c83a09        hello-world         "/hello"            2 days ago          Exited (0) 2 days ago                       friendly_lichterman
+```
+
+Y la información que nos muestra es:
+
+- el id del contenedor, que es un hash que le ha asignado automáticamente al crearlo
+- la imagen desde la que se ha creado el contenedor
+- el comando que se ha ejecutado cuando se ha arrancado el contenedor (ya veremos que se puede definir un comando que se ejecute justo después de arrancar un contenedor)
+- cuándo se ha creado
+- El estado, que puede se *Exited* (parado) o *Up* (ejecutándose), En el caso de Exited, cuándo se paró y el código de error, el  0 es que el contenedor se ha ejecutado correctamente y se ha salido bien. Y en el caso de Up, el tiempo que lleva ejecutándose
+- los puertos que utiliza
+- el nombre, que es un nombre aleatorio que le asigna automáticamente al crear un contenedor o el nombre que nosotros le hayamos asignado al crearlo (como parámetro de docker run)
+
+> **Importante:** Cuando se ha creado el contendor, se ha ejecutado y ha terminado, el contenedor no se borra, no se elimina, se queda en estado parado. Por eso el comando `docker ps` sin argumentos no me lo muestra, hay que ponerle la opción `-a`
+
+Después de ver los comandos básicos para ver y comprobar imágenes y contenedores, vamos a ver algunas opciones interesantes
+
+Para ver las diferentes opciones disponibles para un comando, usamos la opción `--help`
+
+```console
+$ sudo docker ps --help
+
+Usage:	docker ps [OPTIONS]
+
+List containers
+
+Options:
+  -a, --all             Show all containers (default shows just running)
+  -f, --filter filter   Filter output based on conditions provided
+      --format string   Pretty-print containers using a Go template
+  -n, --last int        Show n last created containers (includes all states) (default -1)
+  -l, --latest          Show the latest created container (includes all states)
+      --no-trunc        Don't truncate output
+  -q, --quiet           Only display numeric IDs
+  -s, --size            Display total file sizes
+```
+
+**Ejemplos**
+
+La opción `-l` me muestra el último contenedor que se ha arrancado o sobre el que se ha hecho alguna operación, sea cual sea su estado.
+
+```console
+$ sudo docker ps -l
+
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS                    PORTS               NAMES
+453dd5c83a09        hello-world         "/hello"            3 days ago          Exited (0) 13 hours ago                       friendly_lichterman
+```
+
+La opción `-n <integer>` Me muestra los n últimos contenedores sobre los que se ha hecho alguna operación, independientemente de cual sea su estado.
+
+```console
+$ sudo docker ps -n 4
+
+CONTAINER ID        IMAGE               COMMAND                  CREATED              STATUS                          PORTS               NAMES
+2555528c6189        fedora              "/bin/bash"              About a minute ago   Exited (0) About a minute ago                       charming_ganguly
+9625ec03788f        ubuntu              "/bin/bash"              About a minute ago   Exited (0) About a minute ago                       friendly_kirch
+c89ebbf6ab82        nginx               "/docker-entrypoint.…"   2 minutes ago        Exited (0) About a minute ago                       sad_hopper
+453dd5c83a09        hello-world         "/hello"                 3 days ago           Exited (0) 13 hours ago                             friendly_lichterman
+```
+
+La opción `-q` muestra sólo los IDs de los contenedores en vez  toda la información. Esto viene muy bien para operaciones automáticas o scripts, por ejemplo para borrar un conjunto de contenedores
+
+```console
+$ sudo docker ps -q
+```
+
+Vemos que no muestra nada y es porque sólo muestra los que están en ejecución
+
+> **Nota:** Hay que estar atento al leer la ayuda del comando. En la descripción podemos ver cosas como *(default shows just running)* o *(includes all states)*, pero si no pone nada, por defecto sólo muestra los contenedores que están en ejecución
+
+Si ahora además de la opción `-q` añadimos la opción `-a`, va a mostrar los IDs de todos los contenedores, independientemente de cuál sea su estado.
+
+```console
+$ sudo docker ps -q -a
+
+453dd5c83a09
+```
+
+> **Nota:** Si tenemos que utilizar varias opciones, podemos unirlas, de tal forma que `docker ps -a -q` es equivalente a `docker ps -aq`
+
+La opción `-s` nos muestra lo que ocupan los contenedores, pero sólo los que se están ejecutando. Es interesante para conocer cuánto ocupan, ya que al pararse un contenedor no se elimina a no ser que los borre especificamente)
+
+```console
+$ sudo docker ps -s
+
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES               SIZE
+```
+
+Entonces, si añadimos la opción `-a`, podemos conocer cuánto ocupan todos los contenedores, independientemente de su estado.
+
+```console
+$ sudo docker ps -san 3
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS                     PORTS               NAMES               SIZE
+96d41d727d29        nginx               "/docker-entrypoint.…"   3 minutes ago       Exited (0) 2 minutes ago                       gallant_lumiere     1.11kB (virtual 133MB)
+e2894f049fa4        fedora              "/bin/bash"              3 minutes ago       Exited (0) 3 minutes ago                       brave_lederberg     0B (virtual 183MB)
+31ecbda6db5a        ubuntu              "/bin/bash"              4 minutes ago       Exited (0) 4 minutes ago                       friendly_swanson    0B (virtual 73.9MB)
+
+```
+
+Incluso podemos mostrar cuánto ocupan los 3 últimos contenedores utilizados
+
+```console
+$ sudo docker ps -n 3 -s
+
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS                     PORTS               NAMES               SIZE
+96d41d727d29        nginx               "/docker-entrypoint.…"   5 minutes ago       Exited (0) 4 minutes ago                       gallant_lumiere     1.11kB (virtual 133MB)
+e2894f049fa4        fedora              "/bin/bash"              6 minutes ago       Exited (0) 6 minutes ago                       brave_lederberg     0B (virtual 183MB)
+31ecbda6db5a        ubuntu              "/bin/bash"              6 minutes ago       Exited (0) 6 minutes ago                       friendly_swanson    0B (virtual 73.9MB)
+```
+
+Aquí no hemos puesto la opción `-a`, porque por defecto la opción `-n` muestra los contenedores sea cual sea su estado
+
+
+La opción `-f` nos muestra sólo los contenedores que cumplan la condición indicada por los filtros. Se pueden utilizar comodines *. 
+
+```console
+$ sudo docker ps -f FILTER
+```
+
+Filtros disponibles:
+
+```txt
+id 			        Container’s ID
+name 			    Container’s name
+label 			    An arbitrary string representing either a key or a key-value pair. Expressed as <key> or <key>=<value>
+exited 			    An integer representing the container’s exit code. Only useful with --all.
+status 			    One of created, restarting, running, removing, paused, exited, or dead
+ancestor 		    Filters containers which share a given image as an ancestor. Expressed as <image-name>[:<tag>], <image id>, or <image@digest>
+before or since 	Filters containers created before or after a given container ID or name
+volume 			    Filters running containers which have mounted a given volume or bind mount.
+network 		    Filters running containers connected to a given network.
+publish or expose 	Filters containers which publish or expose a given port. Expressed as <port>[/<proto>] or <startport-endport>/[<proto>]
+health 			    Filters containers based on their healthcheck status. One of starting, healthy, unhealthy or none.
+isolation 		    Windows daemon only. One of default, process, or hyperv.
+is-task 		    Filters containers that are a “task” for a service. Boolean option (true or false)
+```
+
+La lista de filtros se puede obtener en la documentación oficial en el siguiente [enlace](https://docs.docker.com/engine/reference/commandline/ps/#filtering)
+
+Por ejemplo, vamos a filtrar por el nombre del contenedor
+
+```console
+$ sudo docker ps -a -f "name=friendly_lichterman"
+
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS                    PORTS               NAMES
+453dd5c83a09        hello-world         "/hello"            3 days ago          Exited (0) 14 hours ago                       friendly_lichterman
+```
+
+En el caso de las imágenes ocurre igual
+
+Vamos a ver las imágenes que tengo
+
+```console
+$ sudo docker images
+
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+nginx               latest              7e4d58f0e5f3        44 hours ago        133MB
+ubuntu              latest              4e2eef94cd6b        3 weeks ago         73.9MB
+fedora              latest              a368cbcfa678        2 months ago        183MB
+hello-world         latest              bf756fb1ae65        8 months ago        13.3kB
+```
+
+Para mostrar las diferentes opciones utilizamos la opción `--help`
+
+```console
+$ sudo docker images --help
+
+Usage:	docker images [OPTIONS] [REPOSITORY[:TAG]]
+
+List images
+
+Options:
+  -a, --all             Show all images (default hides intermediate images)
+      --digests         Show digests
+  -f, --filter filter   Filter output based on conditions provided
+      --format string   Pretty-print images using a Go template
+      --no-trunc        Don't truncate output
+  -q, --quiet           Only show numeric IDs
+
+```
+
+Con la opción `-q` sólo mostramos el id de las imágenes, que dijimos que era útil para scripts
+
+```console
+$ sudo docker images -q
+
+7e4d58f0e5f3
+4e2eef94cd6b
+a368cbcfa678
+bf756fb1ae65
+```
+
+O podemos utilizar la opción `-f` para filtrar por nombre, ID, ... Lo podemos ver en la documentación oficial
+
+**Ejercicio Práctico:**
+> Práctica 02  - Visualizar información de contenedores e imágenes.pdf
+
