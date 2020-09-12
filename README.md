@@ -16,6 +16,7 @@
   - [2.2 Crear nuestro primer contenedor](#22-crear-nuestro-primer-contenedor)
   - [2.3 Ver imágenes y contenedores](#23-ver-imágenes-y-contenedores)
   - [2.4 Crear un contenedor interactivo](#24-crear-un-contenedor-interactivo)
+  - [2.5 Crear un contenedor en background](#25-crear-un-contenedor-en-background)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -820,7 +821,7 @@ CONTAINER ID        IMAGE               COMMAND             CREATED             
 Si queremos volver a arrancarlo, utilizamos el comando `docker start`, que se utiliza para arrancar contenedores que están parados. Y con la opción `-i` para indicarle que queremos entrar en modo interactivo
 
 ```console
-$ docker start -i CONTAINER
+$ sudo docker start -i CONTAINER
 ```
 
 Entonces en nuestro ejemplo:
@@ -867,7 +868,7 @@ Eso quiere decir que puedo tener muchos contenedores basados en la misma imagen,
 Para parar un contenedor que está en ejecución
 
 ```console
-$ docker stop CONTAINER
+$ sudo docker stop CONTAINER
 ```
 
 El contenedor lo indicamos por el nombre o por el ID y como hemos dicho, podemos indicar el ID con los 4 primeros caracteres.
@@ -875,14 +876,17 @@ El contenedor lo indicamos por el nombre o por el ID y como hemos dicho, podemos
 **Ejemplo**
 
 ```console
-$ docker stop de4b
+$ sudo docker stop de4b
 ```
 
 Con la opción `--rm` le decimos al contenedor que cuando acabe de ejecutarse y se pare, lo elimine y no se quede almacenado.
 
 ```console
-$ docker run -it --rm --name b1 busybox
+$ sudo docker run -it --rm --name b1 busybox
 ```
 
 **Ejercicio Práctico:**
 > Práctica 03 - Contenedores interactivos.pdf
+
+## 2.5 Crear un contenedor en background
+
