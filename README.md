@@ -15,6 +15,7 @@
   - [2.1 Arrancar y parar Docker](#21-arrancar-y-parar-docker)
   - [2.2 Crear nuestro primer contenedor](#22-crear-nuestro-primer-contenedor)
   - [2.3 Ver imágenes y contenedores](#23-ver-imágenes-y-contenedores)
+  - [2.4 Crear un contenedor interactivo](#24-crear-un-contenedor-interactivo)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -757,5 +758,131 @@ bf756fb1ae65
 O podemos utilizar la opción `-f` para filtrar por nombre, ID, ... Lo podemos ver en la documentación oficial
 
 **Ejercicio Práctico:**
-> Práctica 02  - Visualizar información de contenedores e imágenes.pdf
+> Práctica 02 - Visualizar información de contenedores e imágenes.pdf
 
+## 2.4 Crear un contenedor interactivo
+
+Para crear un contenedor interactivo hay que indicarle la opción `-it`. Con `-i` le estamos diciendo que sea interactivo y con `-t` que saque la salida del contenedor por la pantalla, por el terminal tty.
+
+Como ejemplo vamos a crear un contenedor interactivo a partir de la imagen de ubuntu.
+
+```console
+$ sudo docker run -it ubuntu
+
+Unable to find image 'ubuntu:latest' locally
+latest: Pulling from library/ubuntu
+54ee1f796a1e: Pull complete 
+f7bfea53ad12: Pull complete 
+46d371e02073: Pull complete 
+b66c17bbf772: Pull complete 
+Digest: sha256:31dfb10d52ce76c5ca0aa19d10b3e6424b830729e32a89a7c6eee2cda2be67a5
+Status: Downloaded newer image for ubuntu:latest
+root@4af5d4d621e5:/# 
+```
+
+Como no lo tengo en el repositorio local, lo va a descargar. Se puede observar que  hace varias descargas, en este caso 4, y esto es porque una imagen de Docker está formada por varias capas y cada capa es independiente la una de la otra, tienen su propio ID y esto me permite utilizar esas capas entre distintas imagenes. Estos detalles los veremos más adelante.
+
+También vemos que se ha puesto en modo interactivo, porque justo después de descargar la imagen, me ha cambiado el prompt, nos ha metido dentro del contendor. El prompt será el nombre de usuario, que en este caso es root, seguido del nombre del contenedor, que es el ID que le ha puesto cuando lo ha creado (El ID lo genera automáticamente con un algoritmo hash).
+
+Si ahora en otra pestaña de la terminal ejecuto `docker ps` veré como ahora sí que aparece
+
+```console
+$ sudo docker ps
+
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
+4af5d4d621e5        ubuntu              "/bin/bash"         10 minutes ago      Up 10 minutes                           friendly_ritchie
+```
+
+Podemos observar que el CONTAINER ID coincide con el del prompt, que está basado en la imagen de ubuntu, que el comando que ha lanzado después de crearse en `/bin/bash` y que su estado es Up (ejecutándose)
+
+La imagen de ubuntu contiene un pequeño sistema operativo ubuntu, de los que se llaman barebone y que contine lo esencial, no tienen ningún componente adicional. Habrá comandos que yo espero que estén en un sistema operativo normal, pero que en el contenedor no los tengo y eso es porque la imagen se habrá creado lo suficientemente restringida para que el contenedor ejecute la aplicación que necesita y ya está, para que no consuma más recursos de los necesarios.
+
+En el momento que yo hago `exit`, como salgo del comando bash, se para el contenedor y vuelvo a mi sistema operativo
+
+Si ahora hago `docker ps`, vemos que ya no aparece
+
+```console
+$ sudo docker ps
+
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
+```
+
+Y para verlo tendré que hacer `docker ps -a`
+
+```console
+$ sudo docker ps -a
+
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS                      PORTS               NAMES
+4af5d4d621e5        ubuntu              "/bin/bash"         39 minutes ago      Exited (0) 36 seconds ago                       friendly_ritchie
+453dd5c83a09        hello-world         "/hello"            3 days ago          Exited (0) 23 hours ago                         friendly_lichterman
+```
+
+Si queremos volver a arrancarlo, utilizamos el comando `docker start`, que se utiliza para arrancar contenedores que están parados. Y con la opción `-i` para indicarle que queremos entrar en modo interactivo
+
+```console
+$ docker start -i CONTAINER
+```
+
+Entonces en nuestro ejemplo:
+
+```console
+$ sudo docker start -i 4af5
+
+root@4af5d4d621e5:/#  
+```
+
+Vemos que nos vuelve a cambiar el prompt y si vuelvo a ejecutar `docker ps` me aparece como ejecutándose.
+
+> **Nota:** En Docker para referirnos a un contendor o una imagen, podemos utilizar el *"CONTAINER ID"* o el *"NAME"*. Y para el ID podemos utilizar los 4 primeros caracteres
+
+Los contenedores una vez que se paran no se destruyen, no desaparecen. Esto tenemos que tenerlo en cuenta para que no ocupen espacio los que no utilicemos, aunque gracias al uso de imágenes hace que el contenedor final no ocupe mucho.
+
+Si vuelvo a lanzar el comando `docker run` no va a coger el contendor que ya tengo creado, sino que va a crear un contenedor nuevo cada vez que lo ejecuto. Para ejecutar un contenedor que está creado y parado tendré que hacerlo con `docker start`
+
+Si ejecuto de nuevo `docker run`
+
+```console
+$ sudo docker run -it ubuntu
+
+root@34f23eda792b:/# 
+```
+
+Vemos en el prompt que en el nombre de la máquina tenemos otro *CONTAINER ID*
+
+Y si hacemos un `docker ps -a`
+
+```console
+$ sudo docker ps -a
+
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS                      PORTS               NAMES
+d257bd20af55        ubuntu              "/bin/bash"         28 seconds ago      Up 27 seconds                                   goofy_burnell
+4af5d4d621e5        ubuntu              "/bin/bash"         About an hour ago   Exited (0) 20 minutes ago                       friendly_ritchie
+453dd5c83a09        hello-world         "/hello"            3 days ago          Exited (0) 23 hours ago                         friendly_lichterman 
+```
+
+Vemos que tenemos dos contenedores basados en la imagen de ubuntu, uno parado, que es el que creamos antes y otro ejecutándose que es el que acabamos de crear.
+
+Eso quiere decir que puedo tener muchos contenedores basados en la misma imagen, cada uno de ellos independiente. Por ejemplo, un equipo de desarrollo en el que cada desarrollador tiene que tener su propio contenedor para trabajar.
+
+Para parar un contenedor que está en ejecución
+
+```console
+$ docker stop CONTAINER
+```
+
+El contenedor lo indicamos por el nombre o por el ID y como hemos dicho, podemos indicar el ID con los 4 primeros caracteres.
+
+**Ejemplo**
+
+```console
+$ docker stop de4b
+```
+
+Con la opción `--rm` le decimos al contenedor que cuando acabe de ejecutarse y se pare, lo elimine y no se quede almacenado.
+
+```console
+$ docker run -it --rm --name b1 busybox
+```
+
+**Ejercicio Práctico:**
+> Práctica 03 - Contenedores interactivos.pdf
