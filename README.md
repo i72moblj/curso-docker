@@ -890,3 +890,48 @@ $ sudo docker run -it --rm --name b1 busybox
 
 ## 2.5 Crear un contenedor en background
 
+Hemos visto cómo crear contenedores interactivos, es decir, arrancar un contenedor para luego trabajar con él, pero a veces lo que yo quiero es arrancar un contenedor que esté trabajando en modo background, que yo pueda interactuar con él, pero que no necesite tener un terminal, una shell o un bash activo.
+
+Para crear un contenedor en modo background, utilizamos la opción `-d`, que es *detached*, y que lo que hace es crear y ejecutar un contenedor en background.
+
+```console
+$ sudo docker run -d IMAGE
+```
+
+Como ejemplo vamos a usar una imagen de nginx, que es un servidor web muy utilizado y que vamos a volver a trabajar con él a lo largo del curso
+
+```console
+$ sudo docker run -d nginx
+
+Unable to find image 'nginx:latest' locally
+latest: Pulling from library/nginx
+d121f8d1c412: Pull complete 
+ebd81fc8c071: Pull complete 
+655316c160af: Pull complete 
+d15953c0e0f8: Pull complete 
+2ee525c5c3cc: Pull complete 
+Digest: sha256:9a1f8ed9e2273e8b3bbcd2e200024adac624c2e5c9b1d420988809f5c0c41a5e
+Status: Downloaded newer image for nginx:latest
+1e01904b5cb326b740838d7b8f8e1ddf4ff3a4fced7ee0faea57a02430183a92
+```
+
+Si hacemos `docker ps`
+
+```console
+$ sudo docker ps
+
+CONTAINER ID        IMAGE               COMMAND                  CREATED              STATUS              PORTS               NAMES
+1e01904b5cb3        nginx               "/docker-entrypoint.…"   About a minute ago   Up About a minute   80/tcp              sweet_ptolemy
+
+```
+
+Podemos comprobar que después de crearse el contenedor, se está ejecutando, pero no ha entrado en ninguna bash, es decir, que no nos ha dejado en un entorno interactivo, sino que se está ejecutando en modo background. 
+
+Ya veremos más adelante cómo podemos acceder a un contenedor en modo background.
+
+Entonces, tenemos dos maneras de trabajar con contenedores:
+
+- *modo interactivo*: `-it`
+- *modo background*: `-d`
+
+y dependiendo de la imagen nos interesará trabajar de un modo u otro.
