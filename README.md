@@ -18,6 +18,7 @@
   - [2.4 Crear un contenedor interactivo](#24-crear-un-contenedor-interactivo)
   - [2.5 Crear un contenedor en background](#25-crear-un-contenedor-en-background)
   - [2.6 Docker Hub](#26-docker-hub)
+  - [2.7 Borrar imágenes y contenedores](#27-borrar-imágenes-y-contenedores)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -1028,3 +1029,174 @@ Esto viene al caso porque al darnos de alta como usuario en Docker Hub, nuestros
 
 **Ejercicio Práctico:**
 > Práctica 04 - Docker Hub.pdf
+
+## 2.7 Borrar imágenes y contenedores
+
+Para eliminar un contenedor
+
+```console
+$ sudo docker rm CONTAINER
+```
+
+Indicamos qué contenedor queremos eliminar a través de su ID (o los 4 primeros caracteres del ID) o de su nombre (el aleatorio generado automáticamente o el que nosotros le hayamos puesto).
+
+Si la operación se ha realizado correctamente, devuelve el ID del contenedor o su nombre en función de lo que hayamos utilizado en la orden para eliminarlo.
+
+Primero vamos a ver qué contenedores tenemos
+
+```console
+$ sudo docker ps -a
+
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS                           PORTS               NAMES
+a3f66d8239ea        ubuntu:xenial       "bash"                   About an hour ago   Exited (100) About an hour ago                       xenodochial_curran
+1e01904b5cb3        nginx               "/docker-entrypoint.…"   6 days ago          Exited (0) 6 days ago                                sweet_ptolemy
+861de649ce7c        fedora              "/bin/bash"              6 days ago          Exited (0) 6 days ago                                competent_stonebraker
+d257bd20af55        ubuntu              "/bin/bash"              6 days ago          Exited (127) 6 days ago                              goofy_burnell
+4af5d4d621e5        ubuntu              "/bin/bash"              7 days ago          Exited (0) 6 days ago                                friendly_ritchie
+453dd5c83a09        hello-world         "/hello"                 10 days ago         Exited (0) 7 days ago                                friendly_lichterman
+```
+
+Vamos a borrar el contenedor basado en la imagen hello-world
+
+```console
+$ sudo docker rm 453d
+
+453d
+```
+
+Vemos cómo devuelve el ID abreviado del contenedor para confirmar que el contenedor se ha borrado correctamente.
+
+Y si hago
+
+```console
+$ sudo docker ps -a
+
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS                           PORTS               NAMES
+a3f66d8239ea        ubuntu:xenial       "bash"                   About an hour ago   Exited (100) About an hour ago                       xenodochial_curran
+1e01904b5cb3        nginx               "/docker-entrypoint.…"   6 days ago          Exited (0) 6 days ago                                sweet_ptolemy
+861de649ce7c        fedora              "/bin/bash"              6 days ago          Exited (0) 6 days ago                                competent_stonebraker
+d257bd20af55        ubuntu              "/bin/bash"              6 days ago          Exited (127) 6 days ago                              goofy_burnell
+4af5d4d621e5        ubuntu              "/bin/bash"              7 days ago          Exited (0) 6 days ago                                friendly_ritchie                                friendly_lichterman
+```
+
+Podemos comprobar que ya no lo tenemos
+
+Para eliminar una imagen
+
+```console
+$ sudo docker rmi IMAGE
+```
+
+Indicamos qué imagen eliminar mediante el nombre del repositorio y el tag o mediante su ID, tanto completo como abreviado.
+
+Si la imagen se ha borrado correctamente, desetiqueta la imagen y elimina todas las pilas o capas que forma la imagen
+
+Vamos a ver las imágenes que tenemos
+
+```console
+$ sudo docker images
+
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+ubuntu              xenial              c871c45b1573        2 days ago          127MB
+nginx               latest              7e4d58f0e5f3        9 days ago          133MB
+busybox             latest              6858809bf669        10 days ago         1.23MB
+ubuntu              latest              4e2eef94cd6b        4 weeks ago         73.9MB
+fedora              latest              a368cbcfa678        2 months ago        183MB
+hello-world         latest              bf756fb1ae65        8 months ago        13.3kB
+```
+
+Vamos a borrar la imagen hello-world
+
+```console
+$ sudo docker rmi bf756fb1ae65
+
+Untagged: hello-world:latest
+Untagged: hello-world@sha256:7f0a9f93b4aa3022c3a4c147a449bf11e0941a1fd0bf4a8e6c9408b2600777c5
+Deleted: sha256:bf756fb1ae65adf866bd8c456593cd24beb6a0a061dedf42b26a993176745f6b
+Deleted: sha256:9c27e219663c25e0f28493790cc0b88bc973ba3b1686355f221c38a36978ac63
+```
+
+Vemos que desetiqueta la imagen y elimina todas las pilas que la componen
+
+Si volvemos a comprobar las imágenes que tengo para comprobar que ya no la tenemos
+
+```console
+$ sudo docker images
+
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+ubuntu              xenial              c871c45b1573        2 days ago          127MB
+nginx               latest              7e4d58f0e5f3        9 days ago          133MB
+busybox             latest              6858809bf669        10 days ago         1.23MB
+ubuntu              latest              4e2eef94cd6b        4 weeks ago         73.9MB
+fedora              latest              a368cbcfa678        2 months ago        183MB
+```
+
+Sin embargo existen contenedores utilizando esa imagen y nos va a decir que no la puede eliminar porque hay contenedores basados en esa imagen.
+
+Vamos a intentar borrar la imagen de ubuntu:xenial
+
+```console
+$ sudo docker rmi ubuntu:xenial
+
+Error response from daemon: conflict: unable to remove repository reference "ubuntu:xenial" (must force) - container a3f66d8239ea is using its referenced image c871c45b1573
+```
+
+Me indica un error que dice que no se puede eliminar el repositorio ubuntu:xenial porque el contenedor con el ID a3f66d8239ea la está referenciando.
+
+Entonces, tenemos dos opciones, o eliminamos primero los contenedores basados en esa imagen y después la imagen, o forzamos a que la elimine aunque tenga contenedores basados en ella.
+
+Para forzar el borrado de una imagen aunque tenga contenedores basados en ella
+
+```console
+$ sudo docker rmi -f IMAGE
+```
+
+Entonces vamos a forzar el borrado de la imagen ubuntu:xenial
+
+```console
+$ sudo docker rmi -f ubuntu:xenial
+
+Untagged: ubuntu:xenial
+Untagged: ubuntu@sha256:e02d30494327090a50e9a6575c018d067428ae3abdcadb208e9ecd9cb496cf98
+Deleted: sha256:c871c45b1573465016d2a378057b42004660f5bf2521c2ce6c96484673cb2a98
+```
+
+Si volvemos a listar las imágenes que tenemos, vemos que ubuntu:xenial ya no está
+
+```console
+$ sudo docker images
+
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+nginx               latest              7e4d58f0e5f3        9 days ago          133MB
+busybox             latest              6858809bf669        10 days ago         1.23MB
+ubuntu              latest              4e2eef94cd6b        4 weeks ago         73.9MB
+fedora              latest              a368cbcfa678        2 months ago        183MB
+```
+
+Al forzar el borrado de una imagen, elimina la imagen, pero no los contenedores.
+
+Entonces, al listar los contenedores, los contenedores cuya imagen se haya borrado con `-f` tendrán una imagen *"fantasma"*, es decir, aparecerá un hash en vez de un nombre de imagen.
+
+```console
+$ sudo docker ps -a
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS                           PORTS               NAMES
+a3f66d8239ea        c871c45b1573        "bash"                   About an hour ago   Exited (100) About an hour ago                       xenodochial_curran
+1e01904b5cb3        nginx               "/docker-entrypoint.…"   6 days ago          Exited (0) 6 days ago                                sweet_ptolemy
+861de649ce7c        fedora              "/bin/bash"              6 days ago          Exited (0) 6 days ago                                competent_stonebraker
+d257bd20af55        ubuntu              "/bin/bash"              6 days ago          Exited (127) 6 days ago                              goofy_burnell
+4af5d4d621e5        ubuntu              "/bin/bash"              7 days ago          Exited (0) 6 days ago                                friendly_ritchie
+```
+
+Vemos que en el primero, en la columna *IMAGE*, en vez del nombre aparece un ID, el *c871c45b1573*, ese ID es el que tenía la imagen que hemos borrado, pero ya no existe.
+
+Si queremos borrar esos contenedores *"fantasma"*, habría que borrar los contenedores fantasma que existan uno a uno
+
+O usar un comando de consola tipo
+
+```console
+$ sudo docker rm `docker ps -aq | grep c871c45b1573`
+```
+
+Este comando lo que hace es eliminar todos los contenedores por el ID de la imagen en la que estaba basada. Y su ID lo obtenemos mediante el comando `docker ps -aq | grep c871c45b1573` que devuelve los IDs de las líneas que contengan la cadena *c871c45b1573*
+
+> **Nota:** Este comando no funciona, pero sería algo parecido
