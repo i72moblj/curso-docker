@@ -17,6 +17,7 @@
   - [2.3 Ver imágenes y contenedores](#23-ver-imágenes-y-contenedores)
   - [2.4 Crear un contenedor interactivo](#24-crear-un-contenedor-interactivo)
   - [2.5 Crear un contenedor en background](#25-crear-un-contenedor-en-background)
+  - [2.6 Docker Hub](#26-docker-hub)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -907,7 +908,7 @@ Unable to find image 'nginx:latest' locally
 latest: Pulling from library/nginx
 d121f8d1c412: Pull complete 
 ebd81fc8c071: Pull complete 
-655316c160af: Pull complete 
+655316c160af: Pull complete en 
 d15953c0e0f8: Pull complete 
 2ee525c5c3cc: Pull complete 
 Digest: sha256:9a1f8ed9e2273e8b3bbcd2e200024adac624c2e5c9b1d420988809f5c0c41a5e
@@ -935,3 +936,95 @@ Entonces, tenemos dos maneras de trabajar con contenedores:
 - *modo background*: `-d`
 
 y dependiendo de la imagen nos interesará trabajar de un modo u otro.
+
+## 2.6 Docker Hub
+
+En apartados anteriores hemos visto cómo arrancar un contenedor a partir de una imagen y hemos visto que al poner `docker run`, si no teníamos la imagen descargada en el repositorio local, se conectaba automáticamente a un repositorio para descargar la imagen que estamos buscando en el repositorio local. Ese repositorio es el repositorio llamado Docker Hub.
+
+[DockerHub](https://hub.docker.com) es el repositorio centralizado de imagenes por defecto al que se conecta *dockerd* si no encuentra la imagen en nuestro repositorio privado local. En Docker Hub existen un montón de imágenes ya precreadas, tanto de productos oficiales como de particulares o empresas que van subiendo sus imágenes a ese repositorio.
+
+Si en la página de DockerHub buscamos, por ejemplo, ubuntu, nos lleva a un listado donde aparecen todos los repositorios que contienen imagenes de ubuntu. Un repositorio no es más que un sitio centralizado donde yo puedo tener distintas imagenes.
+
+![Docker Hub ubuntu repository](img/docker-hub-ubuntu-repository.png)
+
+En el listado, para cada repositorio podemos ver:
+
+- el nombre del repositorio
+- una breve descripción
+- el tipo de repositorio (official image, verified publisher, nothing)
+- la popularidad (el número de estrellas que ha conseguido)
+- el número de pulls (número de descargas de esa imagen u otra de ese mismo repositorio)
+
+Hay 2 tipos de repositorios, los *oficiales* y los *de usuario*, aunque los de usuario pueden ser de un *publicador de imagenes verificado* o de un *publicador de imagenes no verificado*.
+
+Si accedemos al repositorio, en la descripción nos aparecen las *supported tags*, y vamos a ver qué son los tags.
+
+![Docker Hub ubuntu repository tags](img/docker-hub-ubuntu-repository-tags.png)
+
+Si vemos las imagenes que tenemos en nuestro repositorio local:
+
+```console
+$ sudo docker images
+
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+ubuntu              latest              4e2eef94cd6b        4 weeks ago         73.9MB
+```
+
+Vemos que la primera columna no es el nombre de la imagen, sino *REPOSITORY*, y eso se refiere al nombre del repositorio de Docker Hub al que pertenece la imagen. Y que dentro de ese repositorio, se ha cogido una imagen que está etiquetada con *latest*.
+
+Entonces, si volvemos a Docker Hub, vemos que hay diferentes versiones y que cada versión tiene asociadas distintas etiquetas. En el momento de escribir esto, la etiqueta *latest* del repositorio de ubuntu corresponde a la versión 20.04, llamada también *bionic*.
+
+Cuando yo descargo una imagen de Docker Hub y no le indico nada más, me va a descargar por defecto la imagen que tiene la etiqueta *latest*.
+
+Si yo quiero descargarme una imagen con una etiqueta diferente, tengo que indicarle el nombre del tag.
+
+```console
+$ sudo docker pull REPOSITORY:TAG
+```
+
+`docker pull` sólo descarga una imagen a mi repositorio local, pero no crea un contenedor, a diferencia de `docker run` que descarga la imagen si no la tiene, crea el contenedor y lo ejecuta.
+
+**Ejemplos**
+
+```console
+$ sudo docker pull ubuntu:xenial
+```
+
+Y ejecutamos `docker images`, vemos que tenemos 2 imagenes del repositorio ubuntu, la *latest* que corresponde a *bionic* y la *xenial*.
+
+```console
+$ sudo docker images
+
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+ubuntu              latest              4e5021d210f6        8 days ago          64.2MB
+ubuntu              xenial              77be327e4b63        5 weeks ago         124MB
+```
+
+Igualmente, para crear un contenedor y ejecutarlo tendremos que indicarle el tag de la imagen
+
+```console
+$ sudo docker run -it ubuntu:xenial
+```
+
+Siguiendo con Docker Hub, vemos que después de los tags, hay una descripción más detallada donde el creador del repositorio pondrá lo que él considere adecuado para que sepamos qué estamos haciendo cuando descargamos esa imagen.
+
+> **Nota:** Es conveniente leer bien la descripción detallada de un repostorio y sus imágenes o tags para configurar adecuadamente el contenedor
+
+Arriba hay otra pestaña que es *Tags*, si accedemos, vemos cada una de las etiquetas, cuando fué la última actualización, el tamaño que ocupan, etc. Y el comando para descargarlas.
+
+![Docker Hub ubuntu repository tags tab](img/docker-hub-ubuntu-repository-tags-tab.png)
+
+Si volvemos a la lista de repositorios, vemos que hay 2 tipos de repositorios, que son los repositorios root (oficiales) y los de usuario
+
+![Docker Hub repository types](img/docker-hub-repository-types.png)
+
+- Los *repositorios root*, tienen un sólo nombre, el nombre el repositorio, y suelen pertenecer a empresas corporativas con las que Docker ha llegado a un acuerdo para que suban imagenes suyas a Docker Hub. Son los repositorios *oficiales*. Ejemplo: python
+
+ - Los *repositorios de usuario*, antes del nombre del repositorio aparece el nombre de usuario, aparecen como nombre-usuario/nombre-repositorio. Pueden ser usuarios o empresas que suben sus imagenes. Ejemplo: centos/python-35-centos7. En este caso no es la oficial porque no es un centos puro, sino un centos con una versión de python.
+
+Es conveniente ver quién es el propietario, que aparece en la descripción del repositorio, ya que habrá miles de repositorios, y muchos de ellos serán pruebas de otros usuarios.
+
+Esto viene al caso porque al darnos de alta como usuario en Docker Hub, nuestros repositorios se van a llamar `nombre-usuario/nombre-repositorio`.
+
+**Ejercicio Práctico:**
+> Práctica 04 - Docker Hub.pdf
