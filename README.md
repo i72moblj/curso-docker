@@ -19,6 +19,7 @@
   - [2.5 Crear un contenedor en background](#25-crear-un-contenedor-en-background)
   - [2.6 Docker Hub](#26-docker-hub)
   - [2.7 Borrar imágenes y contenedores](#27-borrar-imágenes-y-contenedores)
+  - [2.8 Docker exec: ejecutar comandos contra contenedores](#28-docker-exec-ejecutar-comandos-contra-contenedores)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -1200,3 +1201,158 @@ $ sudo docker rm `docker ps -aq | grep c871c45b1573`
 Este comando lo que hace es eliminar todos los contenedores por el ID de la imagen en la que estaba basada. Y su ID lo obtenemos mediante el comando `docker ps -aq | grep c871c45b1573` que devuelve los IDs de las líneas que contengan la cadena *c871c45b1573*
 
 > **Nota:** Este comando no funciona, pero sería algo parecido
+
+## 2.8 Docker exec: ejecutar comandos contra contenedores
+
+Docker exec nos permite ejecutar una determinada orden o comando sobre un contenedor que está funcionando.
+
+> **Nota:** Es importante que esté en ejecución, sino dará error
+
+```console
+$ sudo docker exec CONTAINER COMMAND
+```
+
+Vamos a hacer un ejemplo, además vamos a aprender a crear un contenedor con nombre
+
+```console
+$ sudo docker run -it --name my_fedora fedora bash
+
+Unable to find image 'fedora:latest' locally
+latest: Pulling from library/fedora
+c7def56d621e: Pull complete 
+Digest: sha256:d6a6d60fda1b22b6d5fe3c3b2abe2554b60432b7b215adc11a2b5fae16f50188
+Status: Downloaded newer image for fedora:latest
+[root@304905e291ca /]# 
+```
+
+Lo que va a hacer es crear y ejecutar un contenedor de manera interactiva, `-i`, y que la salida sea por la terminal tty, `-t`, con nombre `--name` *my_fedora*, basado en la imagen *fedora:latest* y con el comando que quiero lanzar cuando acabe que va a ser *bash*.
+
+Y vemos que me entra en la bash
+
+Si en otra pestaña de la terminal miramos los contenedores que tenemos ejecutándose
+
+```console
+$ sudo docker ps
+
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
+304905e291ca        fedora              "bash"              2 minutes ago       Up 2 minutes                            my_fedora
+```
+
+Podemos ver, que se está ejecutando, que el CONTAINER ID coincide con el nombre de la máquina del contenedor de fedora y que el nombre ya no es un nombre raro aleatorio, sino que es el que yo le he puesto.
+
+Como ya se está ejecutando, podemos lanzarle un comando con `docker exec`, por ejemplo, vamos a actualizar el sistema
+
+```console
+$ sudo docker exec my_fedora dnf update -y
+
+Fedora 32 openh264 (From Cisco) - x86_64        1.8 kB/s | 2.5 kB     00:01    
+Fedora Modular 32 - x86_64                      451 kB/s | 4.9 MB     00:11    
+Fedora Modular 32 - x86_64 - Updates            2.3 MB/s | 3.7 MB     00:01    
+Fedora 32 - x86_64 - Updates                    4.9 MB/s |  23 MB     00:04    
+Fedora 32 - x86_64                               10 MB/s |  70 MB     00:07    
+Dependencies resolved.
+================================================================================
+ Package                        Arch      Version              Repository  Size
+================================================================================
+Upgrading:
+ curl                           x86_64    7.69.1-6.fc32        updates    289 k
+ elfutils-default-yama-scope    noarch    0.181-1.fc32         updates     17 k
+ elfutils-libelf                x86_64    0.181-1.fc32         updates    192 k
+ elfutils-libs                  x86_64    0.181-1.fc32         updates    265 k
+ fedora-gpg-keys                noarch    32-6                 updates    105 k
+ fedora-repos                   noarch    32-6                 updates     11 k
+ glib2                          x86_64    2.64.5-1.fc32        updates    2.7 M
+ glibc                          x86_64    2.31-4.fc32          updates    3.5 M
+ glibc-common                   x86_64    2.31-4.fc32          updates    1.8 M
+
+...
+
+Complete!
+```
+
+No vamos a poner toda la salida, porque recien instalado hay muchas actualizaciones, pero hay que darse cuenta de que el resultado me lo saca en la misma pestaña del terminal donde lo he ejecutado, y no en la pestaña donde tengo el bash del contenedor.
+
+Esto viene muy bien para ejecutar comandos  en contenedores que se están ejecutando en modo background, `-d`, es decir, contenedores que se ejecutan sin que tengan una salida por pantalla, porque hay contenedores que no tienen esa funcionalidad.
+
+Incluso yo puedo loguearme en la bash en un contenedor que se esté ejecutando
+
+```console
+$ sudo docker exec -it my_fedora bash
+
+[root@304905e291ca /]# 
+```
+
+Antes, en el ejemplo de la actualización de fedora no hemos puesto `-it` porque no era necesaria una terminal interactiva, sino ejecutar un comando en el contenedor en ejecución.
+
+Vamos a hacer otro ejemplo, vamos a crear un contenedor a partir de una imagen de python, así que nos vamos a Docker Hub, lo buscamos y miramos sus detalles.
+
+En vez de que lo descargue automáticamente, vamos a descargar primero la imagen y luego crearemos el contenedor con la imagen ya en el repositorio local
+
+```console
+$ sudo docker pull python
+
+Using default tag: latest
+latest: Pulling from library/python
+57df1a1f1ad8: Pull complete 
+71e126169501: Pull complete 
+1af28a55c3f3: Pull complete 
+03f1c9932170: Pull complete 
+65b3db15f518: Pull complete 
+3e3b8947ed83: Pull complete 
+a4850b8bdbb7: Pull complete 
+416533994968: Pull complete 
+1b580f9ce4ce: Pull complete 
+Digest: sha256:e9b7e3b4e9569808066c5901b8a9ad315a9f14ae8d3949ece22ae339fff2cad0
+Status: Downloaded newer image for python:latest
+docker.io/library/python:latest
+```
+
+Con `docker pull` sólo me descarga la imagen del repositorio de Docker Hub a mi repositorio local. Y al no ponerle etiqueta, me descarga la imagen cuya etiqueta es *latest*.
+
+A diferencia de `docker run`, `docker pull` no me crea ningún contenedor, sólo descarga la imagen.
+
+Ahora es cuando vamos a crear un contenedor interactivo, llamado *my_python* y que esté basado en la imagen *python*.
+
+```console
+$ docker run -it --name my_python python
+
+Python 3.8.5 (default, Sep 10 2020, 16:47:10) 
+[GCC 8.3.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> 
+```
+
+Aquí no se ha puesto *bash* al final porque el contenedor arranca automáticamente la consola de python.
+
+Entonces, si yo estoy trabajando con el contenedor y por algún motivo quiero realizar alguna modificación en el contenedor, tengo dos opciones:
+
+- Pararlo y ejecutarlo añadiéndo *bash* al final, realizar las modificaciones y volver a ejecutarlo normal, para acceder a la consola de python y ejecutar órdenes de python.
+
+- O ejecutar `docker exec -it my_python bash` en otro terminal o pestaña y realizar las modificaciones que sean necesarias, mientras que el contenedor sigue ejecutándose.
+
+Entonces, en resumen, lo que me permite es que aquellos contenedores que no sean interactivos a través del sistema operativo, le pueda pasar comandos con `exec`.
+
+Recordar que los contenedores tienen que estar arrancados, ejecutándose
+
+```console
+$ docker exec -it my_python ls
+```
+
+Y no tengo que parar el contenedor, es más, el contenedor es necesario que se esté ejecutando.
+
+Podemos ejecutar varios comandos al mismo tiempo, separándolos por *;*
+
+```console
+$ docker exec CONTAINER COMMAND1; COMMAND2; ...
+```
+
+El `-it` es sólo si queremos un terminal interactivo, para introducir comandos directamente, si sólo queremos ejecutar un comando o varios comandos al arrancar el contenedor lo hacemos con `exec` pero sin `-it`.
+
+**Tip:** Si tengo una lista muy grande de contenedores y sólo queremos ver los contenedores que tengo basados en fedora
+
+```console
+$ docker ps -a | grep fedora
+```
+
+**Ejercicio Práctico:**
+> Práctica 05 - docker exec y docker rm.pdf
