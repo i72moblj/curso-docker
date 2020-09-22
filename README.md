@@ -20,6 +20,7 @@
   - [2.6 Docker Hub](#26-docker-hub)
   - [2.7 Borrar imágenes y contenedores](#27-borrar-imágenes-y-contenedores)
   - [2.8 Docker exec: ejecutar comandos contra contenedores](#28-docker-exec-ejecutar-comandos-contra-contenedores)
+  - [2.9 Comandos docker image y docker container](#29-comandos-docker-image-y-docker-container)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -1190,17 +1191,7 @@ d257bd20af55        ubuntu              "/bin/bash"              6 days ago     
 
 Vemos que en el primero, en la columna *IMAGE*, en vez del nombre aparece un ID, el *c871c45b1573*, ese ID es el que tenía la imagen que hemos borrado, pero ya no existe.
 
-Si queremos borrar esos contenedores *"fantasma"*, habría que borrar los contenedores fantasma que existan uno a uno
-
-O usar un comando de consola tipo
-
-```console
-$ sudo docker rm `docker ps -aq | grep c871c45b1573`
-```
-
-Este comando lo que hace es eliminar todos los contenedores por el ID de la imagen en la que estaba basada. Y su ID lo obtenemos mediante el comando `docker ps -aq | grep c871c45b1573` que devuelve los IDs de las líneas que contengan la cadena *c871c45b1573*
-
-> **Nota:** Este comando no funciona, pero sería algo parecido
+Si queremos borrar esos contenedores *"fantasma"*, habría que borrar los contenedores fantasma que existan uno a uno.
 
 ## 2.8 Docker exec: ejecutar comandos contra contenedores
 
@@ -1314,7 +1305,7 @@ A diferencia de `docker run`, `docker pull` no me crea ningún contenedor, sólo
 Ahora es cuando vamos a crear un contenedor interactivo, llamado *my_python* y que esté basado en la imagen *python*.
 
 ```console
-$ docker run -it --name my_python python
+$ sudo docker run -it --name my_python python
 
 Python 3.8.5 (default, Sep 10 2020, 16:47:10) 
 [GCC 8.3.0] on linux
@@ -1335,7 +1326,7 @@ Entonces, en resumen, lo que me permite es que aquellos contenedores que no sean
 Recordar que los contenedores tienen que estar arrancados, ejecutándose
 
 ```console
-$ docker exec -it my_python ls
+$ sudo docker exec -it my_python ls
 ```
 
 Y no tengo que parar el contenedor, es más, el contenedor es necesario que se esté ejecutando.
@@ -1343,7 +1334,7 @@ Y no tengo que parar el contenedor, es más, el contenedor es necesario que se e
 Podemos ejecutar varios comandos al mismo tiempo, separándolos por *;*
 
 ```console
-$ docker exec CONTAINER COMMAND1; COMMAND2; ...
+$ sudo docker exec CONTAINER COMMAND1; COMMAND2; ...
 ```
 
 El `-it` es sólo si queremos un terminal interactivo, para introducir comandos directamente, si sólo queremos ejecutar un comando o varios comandos al arrancar el contenedor lo hacemos con `exec` pero sin `-it`.
@@ -1351,8 +1342,236 @@ El `-it` es sólo si queremos un terminal interactivo, para introducir comandos 
 **Tip:** Si tengo una lista muy grande de contenedores y sólo queremos ver los contenedores que tengo basados en fedora
 
 ```console
-$ docker ps -a | grep fedora
+$ sudo docker ps -a | grep fedora
 ```
 
 **Ejercicio Práctico:**
 > Práctica 05 - docker exec y docker rm.pdf
+
+## 2.9 Comandos docker image y docker container
+
+Si ejecutamos docker a secas
+
+```console
+$ sudo docker
+
+Usage:	docker [OPTIONS] COMMAND
+
+A self-sufficient runtime for containers
+
+Options:
+      --config string      Location of client config files (default
+                           "/home/jesus/.docker")
+  -c, --context string     Name of the context to use to connect to the
+                           daemon (overrides DOCKER_HOST env var and
+                           default context set with "docker context use")
+  -D, --debug              Enable debug mode
+  -H, --host list          Daemon socket(s) to connect to
+  -l, --log-level string   Set the logging level
+                           ("debug"|"info"|"warn"|"error"|"fatal")
+                           (default "info")
+      --tls                Use TLS; implied by --tlsverify
+      --tlscacert string   Trust certs signed only by this CA (default
+                           "/home/jesus/.docker/ca.pem")
+      --tlscert string     Path to TLS certificate file (default
+                           "/home/jesus/.docker/cert.pem")
+      --tlskey string      Path to TLS key file (default
+                           "/home/jesus/.docker/key.pem")
+      --tlsverify          Use TLS and verify the remote
+  -v, --version            Print version information and quit
+
+Management Commands:
+  builder     Manage builds
+  config      Manage Docker configs
+  container   Manage containers
+  context     Manage contexts
+  engine      Manage the docker engine
+  image       Manage images
+  network     Manage networks
+  node        Manage Swarm nodes
+  plugin      Manage plugins
+  secret      Manage Docker secrets
+  service     Manage services
+  stack       Manage Docker stacks
+  swarm       Manage Swarm
+  system      Manage Docker
+  trust       Manage trust on Docker images
+  volume      Manage volumes
+
+Commands:
+  attach      Attach local standard input, output, and error streams to a running container
+  build       Build an image from a Dockerfile
+  commit      Create a new image from a container's changes
+  cp          Copy files/folders between a container and the local filesystem
+  create      Create a new container
+  deploy      Deploy a new stack or update an existing stack
+  diff        Inspect changes to files or directories on a container's filesystem
+  events      Get real time events from the server
+  exec        Run a command in a running container
+  export      Export a container's filesystem as a tar archive
+  history     Show the history of an image
+  images      List images
+  import      Import the contents from a tarball to create a filesystem image
+  info        Display system-wide information
+  inspect     Return low-level information on Docker objects
+  kill        Kill one or more running containers
+  load        Load an image from a tar archive or STDIN
+  login       Log in to a Docker registry
+  logout      Log out from a Docker registry
+  logs        Fetch the logs of a container
+  pause       Pause all processes within one or more containers
+  port        List port mappings or a specific mapping for the container
+  ps          List containers
+  pull        Pull an image or a repository from a registry
+  push        Push an image or a repository to a registry
+  rename      Rename a container
+  restart     Restart one or more containers
+  rm          Remove one or more containers
+  rmi         Remove one or more images
+  run         Run a command in a new container
+  save        Save one or more images to a tar archive (streamed to STDOUT by default)
+  search      Search the Docker Hub for images
+  start       Start one or more stopped containers
+  stats       Display a live stream of container(s) resource usage statistics
+  stop        Stop one or more running containers
+  tag         Create a tag TARGET_IMAGE that refers to SOURCE_IMAGE
+  top         Display the running processes of a container
+  unpause     Unpause all processes within one or more containers
+  update      Update configuration of one or more containers
+  version     Show the Docker version information
+  wait        Block until one or more containers stop, then print their exit codes
+
+Run 'docker COMMAND --help' for more information on a command.
+```
+
+Vemos que además de una serie de comandos básicos, hay una serie de comandos que agrupan comandos relacionados y que nos permiten gestionar imágenes, contenedores, ...
+
+Para gestionar imágenes
+
+```console
+$ sudo docker image
+
+Usage:	docker image COMMAND
+
+Manage images
+
+Commands:
+  build       Build an image from a Dockerfile
+  history     Show the history of an image
+  import      Import the contents from a tarball to create a filesystem image
+  inspect     Display detailed information on one or more images
+  load        Load an image from a tar archive or STDIN
+  ls          List images
+  prune       Remove unused images
+  pull        Pull an image or a repository from a registry
+  push        Push an image or a repository to a registry
+  rm          Remove one or more images
+  save        Save one or more images to a tar archive (streamed to STDOUT by default)
+  tag         Create a tag TARGET_IMAGE that refers to SOURCE_IMAGE
+
+Run 'docker image COMMAND --help' for more information on a command.
+```
+
+Es un comando que agrupa todos los comandos que tienen que ver con imágenes para gestionarlas
+
+Algunos, no todos, son equivalentes a los que ya hemos visto, en realidad son alias, por ejemplo
+
+| Comando | Comando equivalente |
+| --- | --- |
+| `docker images` | `docker image ls` |
+| `docker rmi <image>` | `docker image rm <image>` |
+
+```console
+$ sudo docker images
+
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+nginx               latest              7e4d58f0e5f3        12 days ago         133MB
+busybox             latest              6858809bf669        13 days ago         1.23MB
+ubuntu              latest              4e2eef94cd6b        4 weeks ago         73.9MB
+fedora              latest              a368cbcfa678        2 months ago        183MB
+```
+
+```console
+$ sudo docker image ls
+
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+nginx               latest              7e4d58f0e5f3        12 days ago         133MB
+busybox             latest              6858809bf669        13 days ago         1.23MB
+ubuntu              latest              4e2eef94cd6b        4 weeks ago         73.9MB
+fedora              latest              a368cbcfa678        2 months ago        183MB
+```
+
+Vemos que son iguales
+
+Para gestionar contenedores
+
+```console
+$ sudo docker container
+
+Usage:	docker container COMMAND
+
+Manage containers
+
+Commands:
+  attach      Attach local standard input, output, and error streams to a running container
+  commit      Create a new image from a container's changes
+  cp          Copy files/folders between a container and the local filesystem
+  create      Create a new container
+  diff        Inspect changes to files or directories on a container's filesystem
+  exec        Run a command in a running container
+  export      Export a container's filesystem as a tar archive
+  inspect     Display detailed information on one or more containers
+  kill        Kill one or more running containers
+  logs        Fetch the logs of a container
+  ls          List containers
+  pause       Pause all processes within one or more containers
+  port        List port mappings or a specific mapping for the container
+  prune       Remove all stopped containers
+  rename      Rename a container
+  restart     Restart one or more containers
+  rm          Remove one or more containers
+  run         Run a command in a new container
+  start       Start one or more stopped containers
+  stats       Display a live stream of container(s) resource usage statistics
+  stop        Stop one or more running containers
+  top         Display the running processes of a container
+  unpause     Unpause all processes within one or more containers
+  update      Update configuration of one or more containers
+  wait        Block until one or more containers stop, then print their exit codes
+
+Run 'docker container COMMAND --help' for more information on a command.
+```
+
+Es un comando que agrupa todos los comandos que tienen que ver con contenedores para gestionarlos
+
+Algunos son equivalentes a los que ya hemos visto, en realidad son alias, por ejemplo
+
+| Comando | Comando equivalente |
+| --- | --- |
+| `docker ps` | `docker container ls` |
+| `docker ps -a` | `docker container ls -a` |
+
+Recordar que si no tenemos ni idea de lo que hace un comando, podemos ver la ayuda añadiéndo `--help` al final del comando
+
+```console
+$ sudo docker container ls --help
+
+Usage:	docker container ls [OPTIONS]
+
+List containers
+
+Aliases:
+  ls, ps, list
+
+Options:
+  -a, --all             Show all containers (default shows just running)
+  -f, --filter filter   Filter output based on conditions provided
+      --format string   Pretty-print containers using a Go template
+  -n, --last int        Show n last created containers (includes all states) (default -1)
+  -l, --latest          Show the latest created container (includes all states)
+      --no-trunc        Don't truncate output
+  -q, --quiet           Only display numeric IDs
+  -s, --size            Display total file sizes
+```
+
+En resumidas cuentas, con `docker image` y `docker container` podemos tener agrupados todos los comandos que tienen que ver con imágenes y con contenedores respectivamente.
