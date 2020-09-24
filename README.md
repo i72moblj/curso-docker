@@ -22,6 +22,7 @@
   - [2.8 Docker exec: ejecutar comandos contra contenedores](#28-docker-exec-ejecutar-comandos-contra-contenedores)
   - [2.9 Comandos docker image y docker container](#29-comandos-docker-image-y-docker-container)
   - [2.10 Comandos docker logs y docker kill](#210-comandos-docker-logs-y-docker-kill)
+  - [2.11 Comandos docker top y docker stats](#211-comandos-docker-top-y-docker-stats)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -1707,3 +1708,52 @@ d257bd20af55        ubuntu              "/bin/bash"              11 days ago    
 ```
 
 A diferencia de `docker stop`, como no lo hemos parado mediante `docker stop`, sino que lo hemos matado con `docker kill`, al hacer un `docker ps -a`, en la columna *STATUS* aparecerá `Exited (137)` en vez de `Exited (0)`. `Exited (0)` es cuando se ha salido del conteneodro de manera correcta.
+
+## 2.11 Comandos docker top y docker stats
+
+Estos comandos nos permiten recopilar información sobre cómo están trabajando a nivel de recursos los contenedores.
+
+Como ejemplo, vamos a arrancar un contenedor interactivo basado en ubuntu y va a ejecutar un bash
+
+```console
+$ sudo docker run -it ubuntu bash
+
+root@383d456a3939:/# 
+```
+
+Vamos a ver que efectivamente se está ejecutando
+
+```console
+$ sudo docker ps
+
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
+383d456a3939        ubuntu              "bash"              2 minutes ago       Up 2 minutes                            loving_einstein
+```
+
+El comando `docker top` me permite conocer qué procesos son los que más recursos están consumiendo dentro del contenedor en ese momento. El contenedor se indica por su ID completa o abreviada o por su nombre.
+
+```console
+$ sudo docker top 383d
+
+UID                 PID                 PPID                C                   STIME               TTY                 TIME                CMD
+root                9881                9864                0                   18:30               pts/0               00:00:00            bash
+```
+
+Como vemos, en este momento el proceso que más recursos está consumiendo es el bash. Además es el único porque está recién arrancado, si ejecutase algo en el contenedor, también aparecería ahí.
+
+El comando `docker stats` me permite conocer información sobre ese contenedor, como el nombre, el uso que está haciendo de CPU, el uso de memoria y el límite que tiene, E/S de la red y la E/S a nivel del bloques.
+
+```console
+$ sudo docker stats 383d
+
+CONTAINER ID        NAME                CPU %               MEM USAGE / LIMIT   MEM %               NET I/O             BLOCK I/O           PIDS
+383d456a3939        loving_einstein     0.00%               2.176MiB / 7.5GiB   0.03%               3.91kB / 0B         0B / 0B             1
+```
+
+La información que muestra está en modo continuo y se actualiza continuamente, de tal forma que si en el contenedor ejecutamos algo, se ve reflejado al instante, se ve que aumenta el uso de la memoria, procesador, ...
+
+Se sale con `Ctrl + C`
+
+**Ejercicio Práctico:**
+> Práctica 06 - Comprobar estado de contenedores.pdf
+
