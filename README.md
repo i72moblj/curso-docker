@@ -21,6 +21,7 @@
   - [2.7 Borrar imágenes y contenedores](#27-borrar-imágenes-y-contenedores)
   - [2.8 Docker exec: ejecutar comandos contra contenedores](#28-docker-exec-ejecutar-comandos-contra-contenedores)
   - [2.9 Comandos docker image y docker container](#29-comandos-docker-image-y-docker-container)
+  - [2.10 Comandos docker logs y docker kill](#210-comandos-docker-logs-y-docker-kill)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -1575,3 +1576,134 @@ Options:
 ```
 
 En resumidas cuentas, con `docker image` y `docker container` podemos tener agrupados todos los comandos que tienen que ver con imágenes y con contenedores respectivamente.
+
+## 2.10 Comandos docker logs y docker kill
+
+Hemos visto que puede haber contenedores que se ejecutan en modo background, y no podemos saber qué es lo que están haciendo.
+
+Vamos a ver un ejemplo, vamos a crear un contenedor en modo background basado en ubuntu y que cuando se cree, que ejecute un comando que va a mostrar la fecha en un bucle infinito
+
+```console
+$ sudo docker run -d ubuntu sh -c "while true; do date; done"
+
+9b680cbc07c3698ff5dd4434ce3193d77856d64f768b8def9f2d97cb1821eefe
+```
+
+Podemos ver que se ha creado porque devuelve el ID, pero como está en modo background, no podemos ver lo que está haciendo.
+
+Podemos comprobar que se está ejecutando
+
+```console
+$ $ sudo docker ps
+
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS               NAMES
+9b680cbc07c3        ubuntu              "sh -c 'while true; …"   29 seconds ago      Up 27 seconds                           competent_goldwasser
+```
+
+Pero si yo quiero saber qué está sacando por pantalla en ese momento, o sea, qué está pintando, lo puedo ver con `docker log` y el nombre o ID del contenedor
+
+```console
+$ sudo docker logs 9b68
+
+...
+Thu Sep 24 12:50:48 UTC 2020
+Thu Sep 24 12:50:48 UTC 2020
+Thu Sep 24 12:50:48 UTC 2020
+Thu Sep 24 12:50:48 UTC 2020
+Thu Sep 24 12:50:48 UTC 2020
+Thu Sep 24 12:50:48 UTC 2020
+Thu Sep 24 12:50:48 UTC 2020
+Thu Sep 24 12:50:48 UTC 2020
+Thu Sep 24 12:50:48 UTC 2020
+Thu Sep 24 12:50:48 UTC 2020
+Thu Sep 24 12:50:48 UTC 2020
+Thu Sep 24 12:50:48 UTC 2020
+Thu Sep 24 12:50:48 UTC 2020
+Thu Sep 24 12:50:48 UTC 2020
+Thu Sep 24 12:50:48 UTC 2020
+Thu Sep 24 12:50:48 UTC 2020
+Thu Sep 24 12:50:48 UTC 2020
+```
+
+El comando `docker logs` me saca por pantalla todo lo que ha hecho desde el principio, desde que empezó a ejecutarse el contenedor hasta el momento de lanzar `docker logs` y se para.
+
+A veces muestra muchas líneas y no necesitamos tantas, pero se puede acotar con opciones del comando.
+
+Para mostrar sólo las últimas líneas se puede utilzar la opción `--tail` seguida del número de líneas que queremos que muestre. Ejemplo, mostrar las 10 últimas líneas
+
+```console
+$ $ sudo docker logs 9b68 --tail 10
+
+Thu Sep 24 12:56:19 UTC 2020
+Thu Sep 24 12:56:19 UTC 2020
+Thu Sep 24 12:56:19 UTC 2020
+Thu Sep 24 12:56:19 UTC 2020
+Thu Sep 24 12:56:19 UTC 2020
+Thu Sep 24 12:56:19 UTC 2020
+Thu Sep 24 12:56:19 UTC 2020
+Thu Sep 24 12:56:19 UTC 2020
+Thu Sep 24 12:56:19 UTC 2020
+Thu Sep 24 12:56:19 UTC 2020
+```
+
+Para mostrar de manera continuada, sin parar, podemos utilizar la opción `-f`, que es muy parecida al comando `tail -f` de *Linux*.
+
+```console
+$ sudo docker logs 9b68 -f
+
+...
+Thu Sep 24 12:50:48 UTC 2020
+Thu Sep 24 12:50:48 UTC 2020
+Thu Sep 24 12:50:48 UTC 2020
+Thu Sep 24 12:50:48 UTC 2020
+Thu Sep 24 12:50:48 UTC 2020
+Thu Sep 24 12:50:48 UTC 2020
+Thu Sep 24 12:50:48 UTC 2020
+Thu Sep 24 12:50:48 UTC 2020
+Thu Sep 24 12:50:48 UTC 2020
+Thu Sep 24 12:50:48 UTC 2020
+Thu Sep 24 12:50:48 UTC 2020
+Thu Sep 24 12:50:48 UTC 2020
+Thu Sep 24 12:50:48 UTC 2020
+Thu Sep 24 12:50:48 UTC 2020
+Thu Sep 24 12:50:48 UTC 2020
+Thu Sep 24 12:50:48 UTC 2020
+Thu Sep 24 12:50:48 UTC 2020
+...
+```
+
+No va a parar de pintar líneas hasta que pulsemos `Ctrl + C` para que acabe.
+
+Para pararlo podríamos utilizar el comando `docker stop` que ya lo hemos visto, pero vamos a utilizar el comando `docker kill`, que me permite matar un contendor.
+
+```console
+$ sudo docker kill 9b68
+
+9b68
+```
+
+Y podemos comprobar que ya no se está ejecutando
+
+```console
+$ $ sudo docker ps
+
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS               NAMES
+```
+
+Ahora vamos a comprobar que está parado
+
+```console
+$ sudo docker ps -a
+
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS                            PORTS               NAMES
+9b680cbc07c3        ubuntu              "sh -c 'while true; …"   21 minutes ago      Exited (137) About a minute ago                       competent_goldwasser
+62f61e24cf29        28a4c88cdbbf        "python3"                3 days ago          Exited (0) 3 days ago                                 my_python
+aea7f15a7b87        nginx               "/docker-entrypoint.…"   3 days ago          Exited (0) 3 days ago                                 hopeful_brattain
+304905e291ca        fedora              "bash"                   3 days ago          Exited (0) 3 days ago                                 my_fedora
+da8110ccc4ee        c871c45b1573        "/bin/bash"              4 days ago          Exited (0) 4 days .ago                                 sharp_kare
+1e01904b5cb3        nginx               "/docker-entrypoint.…"   11 days ago         Exited (0) 11 days ago                                sweet_ptolemy
+d257bd20af55        ubuntu              "/bin/bash"              11 days ago         Exited (127) 11 days ago                              goofy_burnell
+4af5d4d621e5        ubuntu              "/bin/bash"              11 days ago         Exited (0) 11 days ago                                friendly_ritchie
+```
+
+A diferencia de `docker stop`, como no lo hemos parado mediante `docker stop`, sino que lo hemos matado con `docker kill`, al hacer un `docker ps -a`, en la columna *STATUS* aparecerá `Exited (137)` en vez de `Exited (0)`. `Exited (0)` es cuando se ha salido del conteneodro de manera correcta.
