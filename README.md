@@ -23,6 +23,7 @@
   - [2.9 Comandos docker image y docker container](#29-comandos-docker-image-y-docker-container)
   - [2.10 Comandos docker logs y docker kill](#210-comandos-docker-logs-y-docker-kill)
   - [2.11 Comandos docker top y docker stats](#211-comandos-docker-top-y-docker-stats)
+  - [2.12 Comando docker inspect](#212-comando-docker-inspect)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -1757,3 +1758,404 @@ Se sale con `Ctrl + C`
 **Ejercicio Práctico:**
 > Práctica 06 - Comprobar estado de contenedores.pdf
 
+## 2.12 Comando docker inspect
+
+El comando `docker inspect` nos permite obtener información sobre una imagen o un contenedor a nivel de configuración, o sea, lo que contiene, sus características.
+
+Vamos a ver los contenedores que tengo
+
+```console
+$ sudo docker ps -a
+
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS                     PORTS               NAMES
+f071b38e85d6        nginx               "/docker-entrypoint.…"   2 hours ago         Exited (137) 2 hours ago                       nginx1
+383d456a3939        ubuntu              "bash"                   2 hours ago         Exited (130) 2 hours ago                       loving_einstein
+9b680cbc07c3        ubuntu              "sh -c 'while true; …"   6 hours ago         Exited (137) 6 hours ago                       competent_goldwasser
+62f61e24cf29        28a4c88cdbbf        "python3"                3 days ago          Exited (0) 3 days ago                          my_python
+aea7f15a7b87        nginx               "/docker-entrypoint.…"   4 days ago          Exited (0) 4 days ago                          hopeful_brattain
+304905e291ca        fedora              "bash"                   4 days ago          Exited (0) 3 days ago                          my_fedora
+da8110ccc4ee        c871c45b1573        "/bin/bash"              5 days ago          Exited (0) 5 days ago                          sharp_kare
+1e01904b5cb3        nginx               "/docker-entrypoint.…"   11 days ago         Exited (0) 11 days ago                         sweet_ptolemy
+d257bd20af55        ubuntu              "/bin/bash"              12 days ago         Exited (127) 12 days ago                       goofy_burnell
+4af5d4d621e5        ubuntu              "/bin/bash"              12 days ago         Exited (0) 12 days ago                         friendly_ritchie
+
+```
+
+Como ejemplo vamos a inspeccionar el contenedor de ubuntu creado anteriormente
+
+```console
+$ sudo docker inspect 383d
+
+[
+    {
+        "Id": "383d456a39397f12e3d8754e69f67b9229d980a2dca6ef625417a8874d056f93",
+        "Created": "2020-09-24T16:30:37.696592114Z",
+        "Path": "bash",
+        "Args": [],
+        "State": {
+            "Status": "exited",
+            "Running": false,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 0,
+            "ExitCode": 130,
+            "Error": "",
+            "StartedAt": "2020-09-24T16:30:38.241608189Z",
+            "FinishedAt": "2020-09-24T16:48:47.57437268Z"
+        },
+        "Image": "sha256:4e2eef94cd6b93dd4d794c18b45c763f72edc22858e0da5b6e63a4566a54c03c",
+        "ResolvConfPath": "/var/lib/docker/containers/383d456a39397f12e3d8754e69f67b9229d980a2dca6ef625417a8874d056f93/resolv.conf",
+        "HostnamePath": "/var/lib/docker/containers/383d456a39397f12e3d8754e69f67b9229d980a2dca6ef625417a8874d056f93/hostname",
+        "HostsPath": "/var/lib/docker/containers/383d456a39397f12e3d8754e69f67b9229d980a2dca6ef625417a8874d056f93/hosts",
+        "LogPath": "/var/lib/docker/containers/383d456a39397f12e3d8754e69f67b9229d980a2dca6ef625417a8874d056f93/383d456a39397f12e3d8754e69f67b9229d980a2dca6ef625417a8874d056f93-json.log",
+        "Name": "/loving_einstein",
+        "RestartCount": 0,
+        "Driver": "overlay2",
+        "Platform": "linux",
+        "MountLabel": "",
+        "ProcessLabel": "",
+        "AppArmorProfile": "docker-default",
+        "ExecIDs": null,
+        "HostConfig": {
+            "Binds": null,
+            "ContainerIDFile": "",
+            "LogConfig": {
+                "Type": "json-file",
+                "Config": {}
+            },
+            "NetworkMode": "default",
+            "PortBindings": {},
+            "RestartPolicy": {
+                "Name": "no",
+                "MaximumRetryCount": 0
+            },
+            "AutoRemove": false,
+            "VolumeDriver": "",
+            "VolumesFrom": null,
+            "CapAdd": null,
+            "CapDrop": null,
+            "Capabilities": null,
+            "Dns": [],
+            "DnsOptions": [],
+            "DnsSearch": [],
+            "ExtraHosts": null,
+            "GroupAdd": null,
+            "IpcMode": "private",
+            "Cgroup": "",
+            "Links": null,
+            "OomScoreAdj": 0,
+            "PidMode": "",
+            "Privileged": false,
+            "PublishAllPorts": false,
+            "ReadonlyRootfs": false,
+            "SecurityOpt": null,
+            "UTSMode": "",
+            "UsernsMode": "",
+            "ShmSize": 67108864,
+            "Runtime": "runc",
+            "ConsoleSize": [
+                0,
+                0
+            ],
+            "Isolation": "",
+            "CpuShares": 0,
+            "Memory": 0,
+            "NanoCpus": 0,
+            "CgroupParent": "",
+            "BlkioWeight": 0,
+            "BlkioWeightDevice": [],
+            "BlkioDeviceReadBps": null,
+            "BlkioDeviceWriteBps": null,
+            "BlkioDeviceReadIOps": null,
+            "BlkioDeviceWriteIOps": null,
+            "CpuPeriod": 0,
+            "CpuQuota": 0,
+            "CpuRealtimePeriod": 0,
+            "CpuRealtimeRuntime": 0,
+            "CpusetCpus": "",
+            "CpusetMems": "",
+            "Devices": [],
+            "DeviceCgroupRules": null,
+            "DeviceRequests": null,
+            "KernelMemory": 0,
+            "KernelMemoryTCP": 0,
+            "MemoryReservation": 0,
+            "MemorySwap": 0,
+            "MemorySwappiness": null,
+            "OomKillDisable": false,
+            "PidsLimit": null,
+            "Ulimits": null,
+            "CpuCount": 0,
+            "CpuPercent": 0,
+            "IOMaximumIOps": 0,
+            "IOMaximumBandwidth": 0,
+            "MaskedPaths": [
+                "/proc/asound",
+                "/proc/acpi",
+                "/proc/kcore",
+                "/proc/keys",
+                "/proc/latency_stats",
+                "/proc/timer_list",
+                "/proc/timer_stats",
+                "/proc/sched_debug",
+                "/proc/scsi",
+                "/sys/firmware"
+            ],
+            "ReadonlyPaths": [
+                "/proc/bus",
+                "/proc/fs",
+                "/proc/irq",
+                "/proc/sys",
+                "/proc/sysrq-trigger"
+            ]
+        },
+        "GraphDriver": {
+            "Data": {
+                "LowerDir": "/var/lib/docker/overlay2/912f5a835e4468881f661313703680bdc8c9c6e2937bed793ae60ea2063f31dd-init/diff:/var/lib/docker/overlay2/b97751139057e1a100a8cb88d7b1d5cb169b57558b35dff81eca5f05dff7b640/diff:/var/lib/docker/overlay2/fdee6f56155cc2995be72a8e52780da26a1d0d4d3d46e473ba060c3c5fbe305b/diff:/var/lib/docker/overlay2/5442ce33ad80d1bfef09c4b82937f4fbe029996df174f061eb09878e23e0ddc1/diff:/var/lib/docker/overlay2/80540da123ff322d8cd8bd2ed63c9a98706c624792e98f3d65ccc910652b2748/diff",
+                "MergedDir": "/var/lib/docker/overlay2/912f5a835e4468881f661313703680bdc8c9c6e2937bed793ae60ea2063f31dd/merged",
+                "UpperDir": "/var/lib/docker/overlay2/912f5a835e4468881f661313703680bdc8c9c6e2937bed793ae60ea2063f31dd/diff",
+                "WorkDir": "/var/lib/docker/overlay2/912f5a835e4468881f661313703680bdc8c9c6e2937bed793ae60ea2063f31dd/work"
+            },
+            "Name": "overlay2"
+        },
+        "Mounts": [],
+        "Config": {
+            "Hostname": "383d456a3939",
+            "Domainname": "",
+            "User": "",
+            "AttachStdin": true,
+            "AttachStdout": true,
+            "AttachStderr": true,
+            "Tty": true,
+            "OpenStdin": true,
+            "StdinOnce": true,
+            "Env": [
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+            ],
+            "Cmd": [
+                "bash"
+            ],
+            "Image": "ubuntu",
+            "Volumes": null,
+            "WorkingDir": "",
+            "Entrypoint": null,
+            "OnBuild": null,
+            "Labels": {}
+        },
+        "NetworkSettings": {
+            "Bridge": "",
+            "SandboxID": "a01c49e6c414607b589b5eff255ecbbd3e537ced0dd8913c3fe1b22064340edc",
+            "HairpinMode": false,
+            "LinkLocalIPv6Address": "",
+            "LinkLocalIPv6PrefixLen": 0,
+            "Ports": {},
+            "SandboxKey": "/var/run/docker/netns/a01c49e6c414",
+            "SecondaryIPAddresses": null,
+            "SecondaryIPv6Addresses": null,
+            "EndpointID": "",
+            "Gateway": "",
+            "GlobalIPv6Address": "",
+            "GlobalIPv6PrefixLen": 0,
+            "IPAddress": "",
+            "IPPrefixLen": 0,
+            "IPv6Gateway": "",
+            "MacAddress": "",
+            "Networks": {
+                "bridge": {
+                    "IPAMConfig": null,
+                    "Links": null,
+                    "Aliases": null,
+                    "NetworkID": "a1624a71584bc19c6775e74d4df06131fc6fd4165b45bb2f35024908b7ab6680",
+                    "EndpointID": "",
+                    "Gateway": "",
+                    "IPAddress": "",
+                    "IPPrefixLen": 0,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "MacAddress": "",
+                    "DriverOpts": null
+                }
+            }
+        }
+    }
+]
+```
+
+Nos devuelve un archivo json
+
+Nos da información sobre:
+
+- su nombre
+- su id
+- su estado
+- el comando
+- imagen en la que está basado
+- configuración de red
+- configuración de volúmenes
+- ...
+
+> **Tip:** Se puede guardar la salida del comando en un fichero.json para poder inspeccionarlo mejor.
+> `$ sudo docker inspect container > fichero.json`
+
+Igual ocurre con las imágenes
+
+```console
+$ sudo docker images
+
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+nginx               latest              7e4d58f0e5f3        2 weeks ago         133MB
+busybox             latest              6858809bf669        2 weeks ago         1.23MB
+ubuntu              latest              4e2eef94cd6b        5 weeks ago         73.9MB
+fedora              latest              a368cbcfa678        2 months ago        183MB
+```
+
+Vamos a inspeccionar la de ubuntu
+
+```console
+$ sudo docker inspect 7e4d
+
+[
+    {
+        "Id": "sha256:7e4d58f0e5f3b60077e9a5d96b4be1b974b5a484f54f9393000a99f3b6816e3d",
+        "RepoTags": [
+            "nginx:latest"
+        ],
+        "RepoDigests": [
+            "nginx@sha256:9a1f8ed9e2273e8b3bbcd2e200024adac624c2e5c9b1d420988809f5c0c41a5e"
+        ],
+        "Parent": "",
+        "Comment": "",
+        "Created": "2020-09-10T12:33:10.502421624Z",
+        "Container": "c72d14cf840a1720d6a3edc1d2217754786d41b89e7afa9f3ca8f1a47e0bb8a7",
+        "ContainerConfig": {
+            "Hostname": "c72d14cf840a",
+            "Domainname": "",
+            "User": "",
+            "AttachStdin": false,
+            "AttachStdout": false,
+            "AttachStderr": false,
+            "ExposedPorts": {
+                "80/tcp": {}
+            },
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "NGINX_VERSION=1.19.2",
+                "NJS_VERSION=0.4.3",
+                "PKG_RELEASE=1~buster"
+            ],
+            "Cmd": [
+                "/bin/sh",
+                "-c",
+                "#(nop) ",
+                "CMD [\"nginx\" \"-g\" \"daemon off;\"]"
+            ],
+            "ArgsEscaped": true,
+            "Image": "sha256:fe23bd2ff69e7a6bd80fa4202a69b90c15b49850cef46324611096b4d1c960ff",
+            "Volumes": null,
+            "WorkingDir": "",
+            "Entrypoint": [
+                "/docker-entrypoint.sh"
+            ],
+            "OnBuild": null,
+            "Labels": {
+                "maintainer": "NGINX Docker Maintainers <docker-maint@nginx.com>"
+            },
+            "StopSignal": "SIGTERM"
+        },
+        "DockerVersion": "18.09.7",
+        "Author": "",
+        "Config": {
+            "Hostname": "",
+            "Domainname": "",
+            "User": "",
+            "AttachStdin": false,
+            "AttachStdout": false,
+            "AttachStderr": false,
+            "ExposedPorts": {
+                "80/tcp": {}
+            },
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                "NGINX_VERSION=1.19.2",
+                "NJS_VERSION=0.4.3",
+                "PKG_RELEASE=1~buster"
+            ],
+            "Cmd": [
+                "nginx",
+                "-g",
+                "daemon off;"
+            ],
+            "ArgsEscaped": true,
+            "Image": "sha256:fe23bd2ff69e7a6bd80fa4202a69b90c15b49850cef46324611096b4d1c960ff",
+            "Volumes": null,
+            "WorkingDir": "",
+            "Entrypoint": [
+                "/docker-entrypoint.sh"
+            ],
+            "OnBuild": null,
+            "Labels": {
+                "maintainer": "NGINX Docker Maintainers <docker-maint@nginx.com>"
+            },
+            "StopSignal": "SIGTERM"
+        },
+        "Architecture": "amd64",
+        "Os": "linux",
+        "Size": 132640291,
+        "VirtualSize": 132640291,
+        "GraphDriver": {
+            "Data": {
+                "LowerDir": "/var/lib/docker/overlay2/82cede408c0c812f0fb9ceb8e63d8a8566b0d0a6b59b1dce5e88c380f840033f/diff:/var/lib/docker/overlay2/f2b7266f576fec2fa960368ec330f3f78d6dfb76bc3850ee066cbf32d3ad8281/diff:/var/lib/docker/overlay2/57337486b9a3d88a4bdf672bc8564b699e1e65d3e7e89da4ab4d2bcbfb4822e8/diff:/var/lib/docker/overlay2/2a38ad461d4d8ed73752362c60fcf90aa4366b4c94d2180274cc8210b475ade0/diff",
+                "MergedDir": "/var/lib/docker/overlay2/265928f59959372e9dcee51b627ccba557ca700ab09b7931118bf25f4b8c352d/merged",
+                "UpperDir": "/var/lib/docker/overlay2/265928f59959372e9dcee51b627ccba557ca700ab09b7931118bf25f4b8c352d/diff",
+                "WorkDir": "/var/lib/docker/overlay2/265928f59959372e9dcee51b627ccba557ca700ab09b7931118bf25f4b8c352d/work"
+            },
+            "Name": "overlay2"
+        },
+        "RootFS": {
+            "Type": "layers",
+            "Layers": [
+                "sha256:07cab433985205f29909739f511777a810f4a9aff486355b71308bb654cdc868",
+                "sha256:f431d0917d4154d878551a6b8f716dead84d7ac71601616672a173d67e9edb6c",
+                "sha256:60c688e8765e549c1debb75e10b37c9f56528a21c408e15191b36181ac342282",
+                "sha256:eabfa4cd2d12ea36b06f20ac0104ceb66b026ea1950de9ec3a80d74d6d8cc54f",
+                "sha256:908cf8238301a162a7fc4e2ddb482dacc52d4b96138fbdb18fe8fac30591e852"
+            ]
+        },
+        "Metadata": {
+            "LastTagTime": "0001-01-01T00:00:00Z"
+        }
+    }
+]
+```
+
+También nos va a devolver un json.
+
+La información va a ser muy parecida a la de un contenedor, porque un contenedor no es nada más que una imagen en ejecución y algunas cosas más.
+
+Más adelante veremos en más detalle algunas de esas propiedades.
+
+> **Tip:** Podemos usar grep para inspeccionar un campo concreto. 
+
+Por ejemplo, ver la dirección IP que le ha asignado al contenedor
+
+```console
+$ sudo docker inspect 383d | grep IPAddr
+            
+            "SecondaryIPAddresses": null,
+            "IPAddress": "",
+                    "IPAddress": "",
+```
+
+Así, si conocemos el nombre de la propiedad en el json, podemos obtener directamente su valor
+
+**Ejercicio Práctico:**
+> Práctica 07 - Docker inspect.pdf
