@@ -27,6 +27,7 @@
 - [SECCIÓN 3: Redes en Docker](#sección-3-redes-en-docker)
   - [3.1 Introducción a los puertos en Docker](#31-introducción-a-los-puertos-en-docker)
   - [3.2 Gestionar puertos para acceder al contenedor](#32-gestionar-puertos-para-acceder-al-contenedor)
+  - [3.3 Redes en Docker](#33-redes-en-docker)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -2271,3 +2272,224 @@ Entonces para acceder a él:
 [http://localhost:8080](http://localhost:8080)
 
 Entonces, con `-P` si queremos que Docker se encargue del mapeo de puertos o `-p` para indicar el mapeo de puertos que yo quiero.
+
+## 3.3 Redes en Docker
+
+Hemos visto cómo podemos configurar un contenedor para que escuche por un determiando puerto, pero realmente todo esto se basa en que Docker mantiene una arquitectura de redes por debajo que nos permite gestionar las distintas redes que vamos a usar o que podemos usar dentro de Docker para que estas redes se conecten a cada contenedor.
+
+Vamos a ver cómo funcionan conceptualmente estas redes
+
+Hay un comando, `docker network`, que nos da información sobre las redes que tenemos y los objetos que están asociados a la misma dentro de Docker
+
+```console
+$ sudo docker network
+
+Usage:	docker network COMMAND
+
+Manage networks
+
+Commands:
+  connect     Connect a container to a network
+  create      Create a network
+  disconnect  Disconnect a container from a network
+  inspect     Display detailed information on one or more networks
+  ls          List networks
+  prune       Remove all unused networks
+  rm          Remove one or more networks
+
+Run 'docker network COMMAND --help' for more information on a command.
+```
+
+En este capítulo vamos a ver sobre todo `docker network ls` para ver cómo funcionan y qué características tienen
+
+```console
+$ docker network ls
+
+NETWORK ID          NAME                DRIVER              SCOPE
+93c3fbcbd2e0        bridge              bridge              local
+37250215cc83        host                host                local
+2006762eef86        none                null                local
+```
+
+Vemos que existen 3 redes de Docker:
+
+- Redes de tipo *bridge*, que tienen un driver *bridge*
+- Redes de tipo *host*, que tienen un driver *host*
+- Redes de tipo *none*, que tienen un driver *null*
+
+### Redes de tipo bridge, que tienen un driver bridge
+
+Las redes de tipo bridge permiten que haya como redes privadas dentro de una máquina que se puedan conectar a través de la red física de la propia máquina al exterior.
+
+Por defecto, al instalar Docker, existe una red que se llama bridge y que utiliza un driver que también se llama bridge, pero eso no quiere decir el driver y el nombre que se le pone a la red sean lo mismo. Más adelante crearemos una red con otro nombre y le diremos que el driver sea de tipo bridge.
+
+Y luego tenemos el ámbito, que significa que sólo funciona en local o que puede extenderse o ampliarse a otras máquinas.
+
+De momento, quedarse con que la red de tipo bridge es la que utilizan los contenedores por defecto si no le indicamos lo contrario. 
+
+### Redes de tipo host, que tienen un driver host
+
+La red de tipo host, que lo que hace es que todos los contenedores que pertenecen a esta red sólo dialogan o se pueden ver con el host principal, es decir, no se pueden ver o comunicar entre sí.
+
+Está pensado para contenedores que tienen que ser totalmente autónomos y que tienen una funcionalidad totalmente independiente.
+
+### Redes de tipo none, que tienen un driver null
+
+Se aplica a contenedores que no tienen red, porque no la necesiten, por ejemplo para ejecutar un proceso o lo que sea.
+
+Por defecto, todos los contenedores usan la red bridge si no le decimos lo contrario.
+
+Entonces, una vez vistos los tipos de redes, vamos a verlo con el ejemplo de los docker de Nginx que teníamos corriendo
+
+Listamos los contenedores que se están ejecutando
+
+```console
+$ sudo docker ps
+
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                   NAMES
+9e8caab3a488        nginx               "/docker-entrypoint.…"   4 hours ago         Up 4 hours          0.0.0.0:8080->80/tcp    nginx2
+30bfdba66445        nginx               "/docker-entrypoint.…"   4 hours ago         Up 4 hours          0.0.0.0:32768->80/tcp   compassionate_merkle
+```
+
+Recordemos que docker inspect nos permitía conocer las características de un contenedor
+
+Entonces, si los inspeccionamos y vemos la dirección IP que les ha asignado:
+
+```console
+$ docker inspect compassionate_merkle | grep IPAd
+
+            "SecondaryIPAddresses": null,
+            "IPAddress": "172.17.0.2",
+                    "IPAddress": "172.17.0.2",
+```
+
+```console
+$ docker inspect nginx2 | grep IPAd
+
+            "SecondaryIPAddresses": null,
+            "IPAddress": "172.17.0.3",
+                    "IPAddress": "172.17.0.3",
+```
+
+Vemos que las IP de los contenedores son 172.17.0.2 y 172.17.0.3 respectivamente.
+
+En realidad, la red bridge, que como hemos visto es la red por defecto, tiene asociadas un rango de IPs de las que puede disponer, al primer contenedor le asigna la primera IP disponible, que es 172.17.0.2, ya que la 172.17.0.1 es la puerta de enlace. Al segundo contenedor le ha asignado la IP 172.17.0.3, que es la siguiente IP. Y a cada contenedor que se va creando, le va asignando la siguiente IP del rango de IPs disponibles.
+
+Entonces, si creo un nuevo contenedor de Nginx
+
+```console
+$ sudo docker run -d --name nginx3 -p 9080:80 nginx
+
+3c8117c31d8d9833470899c04d45a2f537af9cfc51c356755156fa7307beda7f
+```
+
+Vemos que ha arrancado
+
+```console
+$ sudo docker ps
+
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                   NAMES
+3c8117c31d8d        nginx               "/docker-entrypoint.…"   39 seconds ago      Up 37 seconds       0.0.0.0:9080->80/tcp    nginx3
+9e8caab3a488        nginx               "/docker-entrypoint.…"   4 hours ago         Up 4 hours          0.0.0.0:8080->80/tcp    nginx2
+30bfdba66445        nginx               "/docker-entrypoint.…"   4 hours ago         Up 4 hours          0.0.0.0:32768->80/tcp   compassionate_merkle
+```
+
+E inspeccionamos sus propiedades
+
+```console
+$ docker inspect nginx3 | grep IPAd
+
+            "SecondaryIPAddresses": null,
+            "IPAddress": "172.17.0.4",
+                    "IPAddress": "172.17.0.4",
+```
+
+Vemos que le ha asignado la IP 172.17.0.4, que era la siguiente disponible dentro del rango de IPs disponibles
+
+Entonces podemos ver que cuando estamos trabajando con una red de tipo bridge, a todos los contenedores que se van añadiendo a esa red, se les va asignando una dirección IP.
+
+Resumiendo, tenemos una red de tipo bridge y a esa red de tipo bridge se van añadiendo, asociando los contenedores que voy creando y a cada contenedor se le va a ir dando una IP con la cual yo puedo trabajar.
+
+Si por ejemplo hacemos un ping desde la máquina host a esas IPs vemos que podemos llegar.
+ 
+ Si por ejemplo hacemos un ping desde la máquina host a cualquiera de esas IPs
+
+```console
+$ ping 172.17.0.3
+PING 172.17.0.3 (172.17.0.3) 56(84) bytes of data.
+64 bytes from 172.17.0.3: icmp_seq=1 ttl=64 time=0.077 ms
+64 bytes from 172.17.0.3: icmp_seq=2 ttl=64 time=0.053 ms
+64 bytes from 172.17.0.3: icmp_seq=3 ttl=64 time=0.051 ms
+^C
+--- 172.17.0.3 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 39ms
+rtt min/avg/max/mdev = 0.051/0.060/0.077/0.013 ms
+```
+
+Vemos que podemos llegar, por lo tanto, vemos que tanto la máquina host como los contenedores están en la misma red.
+
+¿Cómo sabemos a qué red pertenece cada contenedor?
+
+Ya lo veremos más adelante en más profundidad, pero de momento podemos hacer `docker inspect` para ver las características o propiedades del contenedor, en el apartado "NetworkSettings"
+
+```console
+$ docker inspect nginx2
+
+    ...
+
+	"NetworkSettings": {
+            "Bridge": "",
+            "SandboxID": "ab4b2016929194baee8ded4f845c852cb042488eba0ca995a5943eb097ee7e29",
+            "HairpinMode": false,
+            "LinkLocalIPv6Address": "",
+            "LinkLocalIPv6PrefixLen": 0,
+            "Ports": {
+                "80/tcp": [
+                    {
+                        "HostIp": "0.0.0.0",
+                        "HostPort": "8080"
+                    }
+                ]
+            },
+            "SandboxKey": "/var/run/docker/netns/ab4b20169291",
+            "SecondaryIPAddresses": null,
+            "SecondaryIPv6Addresses": null,
+            "EndpointID": "a56d2aaeccab9d453634840051782688f6c7a9df30ef50d10898ce353c289c77",
+            "Gateway": "172.17.0.1",
+            "GlobalIPv6Address": "",
+            "GlobalIPv6PrefixLen": 0,
+            "IPAddress": "172.17.0.3",
+            "IPPrefixLen": 16,
+            "IPv6Gateway": "",
+            "MacAddress": "02:42:ac:11:00:03",
+            "Networks": {
+                "bridge": {
+                    "IPAMConfig": null,
+                    "Links": null,
+                    "Aliases": null,
+                    "NetworkID": "93c3fbcbd2e0e6baae6916e3b8f01f11b4ef54272bfd420c100a09bcffda090a",
+                    "EndpointID": "a56d2aaeccab9d453634840051782688f6c7a9df30ef50d10898ce353c289c77",
+                    "Gateway": "172.17.0.1",
+                    "IPAddress": "172.17.0.3",
+                    "IPPrefixLen": 16,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "MacAddress": "02:42:ac:11:00:03",
+                    "DriverOpts": null
+                }
+            }
+        }
+
+    ...
+
+```
+
+Podemos ver que:
+
+- pertenece a una red de tipo bridge
+- el puerto con el que se está mapeando
+- la dirección IP
+- la puerta de enlace, Gateway
+
+Entonces podemos ver que es muy sencillo obtener información acerca de la red del contenedor a través del comando `docker inspect`.
