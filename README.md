@@ -24,6 +24,8 @@
   - [2.10 Comandos docker logs y docker kill](#210-comandos-docker-logs-y-docker-kill)
   - [2.11 Comandos docker top y docker stats](#211-comandos-docker-top-y-docker-stats)
   - [2.12 Comando docker inspect](#212-comando-docker-inspect)
+- [SECCIÓN 3: Redes en Docker](#sección-3-redes-en-docker)
+  - [3.1 Introducción a los puertos en Docker](#31-introducción-a-los-puertos-en-docker)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -2159,3 +2161,31 @@ Así, si conocemos el nombre de la propiedad en el json, podemos obtener directa
 
 **Ejercicio Práctico:**
 > Práctica 07 - Docker inspect.pdf
+
+# SECCIÓN 3: Redes en Docker
+
+## 3.1 Introducción a los puertos en Docker
+
+Hasta ahora hemos trabajado con contenedores, vamos a decir simples, en el sentido de que los arrancaba y dentro tenían alguna opción con la que poder trabajar, pero en muchas ocasiones, los componentes que hay dentro de un contenedor tienen que ser accesibles desde fuera, pero además, accesibles desde fuera como si formaran parte de una máquina.
+
+Por ejemplo, si tenemos un contenedor que tenga un Apache, Nginx, Tomcat, MySQL, ... que requiera que los clientes que se conectan a ese contenedor, a esa máquina, lo hagan a través de un puerto.
+
+Por defecto, los puertos de un contenedor son privados, es decir, no pueden ser accedidos públicamente desde fuera.
+
+Por lo tanto, yo lo que tengo que hacer es hacerlos públicos y, además, puedo mapearlos con un puerto del host donde se está ejecutando el contenedor.
+
+Vamos a ver un ejemplo:
+
+![Ejemplo puertos Docker](img/ejemplo-puertos-docker.png)
+
+Tengo un contenedor en el que se está ejecutándo un Tomcat, que por defecto escucha por el puerto 8080 dentro del contenedor. Pues bueno, para poder acceder a ese Tomcat, ese puerto tengo que hacerlo público, tengo que exponer el puerto del contenedor y además, tengo que mapearlo con otro puerto dentro de la máquina host, la máquina real, por ejemplo, el puerto 80.
+
+Lo que le estoy diciendo es que el puerto 8080 del contenedor va a ser accesible a través del puerto 80 de la máquina host. Entonces cuando un cliente se quiera conectar al Tomcat, tendrá que hacerlo a través del puerto 80 y Docker se encargará de mapear ese puerto 80 de la máquina host con el puerto 8080 del contenedor. 
+
+Para acceder al contenedor [http://localhost:80](http://localhost:80)
+
+Será localhost o el nombre o IP que tenga la máquina host, la máquina real.
+
+Entonces, cuando tenemos un contenedor con esta arquitecturra, tendremos que indicarle cómo podemos usar ese puerto y cómo podemos publicarlo, exponerlo, para que los clientes accedan al servicio del contenedor.
+
+En DockerHub, cuando las imagenes presentan este tipo de arquitectura, normalmente, indican como crear un docker y cómo se deben exponer los puertos.
