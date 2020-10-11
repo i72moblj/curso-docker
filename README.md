@@ -28,6 +28,10 @@
   - [3.1 Introducción a los puertos en Docker](#31-introducción-a-los-puertos-en-docker)
   - [3.2 Gestionar puertos para acceder al contenedor](#32-gestionar-puertos-para-acceder-al-contenedor)
   - [3.3 Redes en Docker](#33-redes-en-docker)
+    - [Redes de tipo bridge, que tienen un driver bridge](#redes-de-tipo-bridge-que-tienen-un-driver-bridge)
+    - [Redes de tipo host, que tienen un driver host](#redes-de-tipo-host-que-tienen-un-driver-host)
+    - [Redes de tipo none, que tienen un driver null](redes-de-tipo-none-que-tienen-un-driver-null)
+  - [3.4 Inspeccionar una red](#34-inspeccionar-una-red)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -2435,6 +2439,8 @@ Ya lo veremos más adelante en más profundidad, pero de momento podemos hacer `
 ```console
 $ docker inspect nginx2
 
+[
+
     ...
 
 	"NetworkSettings": {
@@ -2483,6 +2489,7 @@ $ docker inspect nginx2
 
     ...
 
+]
 ```
 
 Podemos ver que:
@@ -2493,3 +2500,242 @@ Podemos ver que:
 - la puerta de enlace, Gateway
 
 Entonces podemos ver que es muy sencillo obtener información acerca de la red del contenedor a través del comando `docker inspect`.
+
+## 3.4 Inspeccionar una red
+
+En el capítulo anterior hemos visto cómo podemos conocer las características o propiedades de un contenedor respecto a la red donde se encuentra, como la dirección IP, mapeo de puertos, ...
+
+En este capítulo lo que vamos a ver son las propiedades o características, no del contenedor, sino de la red propiamente dicha. Y lo vamos a hacer con `docker network inspect`
+
+Primero vamos a ver las redes que tenemos
+
+```console
+$ sudo docker network ls
+
+NETWORK ID          NAME                DRIVER              SCOPE
+93c3fbcbd2e0        bridge              bridge              local
+37250215cc83        host                host                local
+2006762eef86        none                null                local
+```
+
+Y vamos a inspeccionar la red con nombre bridge
+
+```console
+$ sudo docker network inspect bridge
+
+[
+    {
+        "Name": "bridge",
+        "Id": "93c3fbcbd2e0e6baae6916e3b8f01f11b4ef54272bfd420c100a09bcffda090a",
+        "Created": "2020-10-11T11:12:23.548888296+02:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": null,
+            "Config": [
+                {
+                    "Subnet": "172.17.0.0/16",
+                    "Gateway": "172.17.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {
+            "30bfdba664453f0184d9f7c42c1e451ab2307b834427d7944d5a4decd858de0c": {
+                "Name": "compassionate_merkle",
+                "EndpointID": "62276a4b59f5a0db082f0aec553efb63770782517da7a7b4d62e5208d357c8ae",
+                "MacAddress": "02:42:ac:11:00:02",
+                "IPv4Address": "172.17.0.2/16",
+                "IPv6Address": ""
+            },
+            "3c8117c31d8d9833470899c04d45a2f537af9cfc51c356755156fa7307beda7f": {
+                "Name": "nginx3",
+                "EndpointID": "208f803f1af7ae9a03470eee5ad6acc1a0a813444253bb2a872b55d5a3da9170",
+                "MacAddress": "02:42:ac:11:00:04",
+                "IPv4Address": "172.17.0.4/16",
+                "IPv6Address": ""
+            },
+            "9e8caab3a488abab61d0d20c1c5f7424d0e4cd6a079125ffdc0507106a0b62c6": {
+                "Name": "nginx2",
+                "EndpointID": "a56d2aaeccab9d453634840051782688f6c7a9df30ef50d10898ce353c289c77",
+                "MacAddress": "02:42:ac:11:00:03",
+                "IPv4Address": "172.17.0.3/16",
+                "IPv6Address": ""
+            }
+        },
+        "Options": {
+            "com.docker.network.bridge.default_bridge": "true",
+            "com.docker.network.bridge.enable_icc": "true",
+            "com.docker.network.bridge.enable_ip_masquerade": "true",
+            "com.docker.network.bridge.host_binding_ipv4": "0.0.0.0",
+            "com.docker.network.bridge.name": "docker0",
+            "com.docker.network.driver.mtu": "1500"
+        },
+        "Labels": {}
+    }
+]
+```
+
+Muestra las propiedades y características de la red:
+
+- el nombre de la red: *bridge*
+- el driver que está utilizando: *bridge*
+- la subred, que nos va a indicar el rango de IPs que puede ir asignando a los contenedores que se vayan asociando a la red: *172.17.0.0/16*
+- La puerta de enlace, cuya IP es la primera del rango de direcciones IP: *172.17.0.1*
+- Los contenedores asociados a esta red que están en ejecución. Si no se están ejecutando no aparecen. *compassionate_merkle*, *nginx3* y *nginx2*
+
+Entonces si yo quiero saber cuántos contenedores están asociados a una determinada red, lo mejor es mirarlo en la propia red y no ir contenedor a contenedor.
+
+Si yo paro un contenedor, por ejemplo nginx3
+
+```console
+$ sudo docker stop nginx3
+
+nginx3
+```
+
+Y vuelvo a inspeccionar la red bridge
+
+```console
+$ sudo docker network inspect bridge
+
+[
+    {
+        "Name": "bridge",
+        "Id": "93c3fbcbd2e0e6baae6916e3b8f01f11b4ef54272bfd420c100a09bcffda090a",
+        "Created": "2020-10-11T11:12:23.548888296+02:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": null,
+            "Config": [
+                {
+                    "Subnet": "172.17.0.0/16",
+                    "Gateway": "172.17.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {
+            "30bfdba664453f0184d9f7c42c1e451ab2307b834427d7944d5a4decd858de0c": {
+                "Name": "compassionate_merkle",
+                "EndpointID": "62276a4b59f5a0db082f0aec553efb63770782517da7a7b4d62e5208d357c8ae",
+                "MacAddress": "02:42:ac:11:00:02",
+                "IPv4Address": "172.17.0.2/16",
+                "IPv6Address": ""
+            },
+            "9e8caab3a488abab61d0d20c1c5f7424d0e4cd6a079125ffdc0507106a0b62c6": {
+                "Name": "nginx2",
+                "EndpointID": "a56d2aaeccab9d453634840051782688f6c7a9df30ef50d10898ce353c289c77",
+                "MacAddress": "02:42:ac:11:00:03",
+                "IPv4Address": "172.17.0.3/16",
+                "IPv6Address": ""
+            }
+        },
+        "Options": {
+            "com.docker.network.bridge.default_bridge": "true",
+            "com.docker.network.bridge.enable_icc": "true",
+            "com.docker.network.bridge.enable_ip_masquerade": "true",
+            "com.docker.network.bridge.host_binding_ipv4": "0.0.0.0",
+            "com.docker.network.bridge.name": "docker0",
+            "com.docker.network.driver.mtu": "1500"
+        },
+        "Labels": {}
+    }
+]
+```
+
+Podemos comprobar que ahora sólo aparecen dos contenedores, *compassionate_merkle* y *nginx2*
+
+El contenedor *nginx3* ya no aparece porque lo he parado, y al pararlo, le quita todas las características de red, ... que tenga
+
+De hecho, si lo vuelvo a arrancar
+
+```console
+$ sudo docker start nginx3
+
+nginx3
+```
+
+Y vuelvo a inspeccionar la red bridge
+
+```console
+$ sudo docker network inspect bridge
+
+[
+    {
+        "Name": "bridge",
+        "Id": "93c3fbcbd2e0e6baae6916e3b8f01f11b4ef54272bfd420c100a09bcffda090a",
+        "Created": "2020-10-11T11:12:23.548888296+02:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": null,
+            "Config": [
+                {
+                    "Subnet": "172.17.0.0/16",
+                    "Gateway": "172.17.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {
+            "30bfdba664453f0184d9f7c42c1e451ab2307b834427d7944d5a4decd858de0c": {
+                "Name": "compassionate_merkle",
+                "EndpointID": "62276a4b59f5a0db082f0aec553efb63770782517da7a7b4d62e5208d357c8ae",
+                "MacAddress": "02:42:ac:11:00:02",
+                "IPv4Address": "172.17.0.2/16",
+                "IPv6Address": ""
+            },
+            "9e8caab3a488abab61d0d20c1c5f7424d0e4cd6a079125ffdc0507106a0b62c6": {
+                "Name": "nginx2",
+                "EndpointID": "a56d2aaeccab9d453634840051782688f6c7a9df30ef50d10898ce353c289c77",
+                "MacAddress": "02:42:ac:11:00:03",
+                "IPv4Address": "172.17.0.3/16",
+                "IPv6Address": ""
+            }
+        },
+        "Options": {
+            "com.docker.network.bridge.default_bridge": "true",
+            "com.docker.network.bridge.enable_icc": "true",
+            "com.docker.network.bridge.enable_ip_masquerade": "true",
+            "com.docker.network.bridge.host_binding_ipv4": "0.0.0.0",
+            "com.docker.network.bridge.name": "docker0",
+            "com.docker.network.driver.mtu": "1500"
+        },
+        "Labels": {}
+    }
+]
+```
+
+Vemos que vuelve a estar el contenedor *nginx3*
+
+A medida que se van asignando contenedores a una red le va a ir asignando direcciones IP y estas direcciones IP se reutilizan, por lo que si yo paro un contenedor y lo vuelvo a arrancar más tarde, puede ser que tenga la misma dirección IP u otra diferente, por lo que un contenedor no va a tener siempre la misma dirección IP.
+
+**Ejercicio Práctico:**
+> Práctica 08 - Trabajar con puertos y redes.pdf
+
