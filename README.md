@@ -26,6 +26,7 @@
   - [2.12 Comando docker inspect](#212-comando-docker-inspect)
 - [SECCIÓN 3: Redes en Docker](#sección-3-redes-en-docker)
   - [3.1 Introducción a los puertos en Docker](#31-introducción-a-los-puertos-en-docker)
+  - [3.2 Gestionar puertos para acceder al contenedor](#32-gestionar-puertos-para-acceder-al-contenedor)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -2186,6 +2187,87 @@ Para acceder al contenedor [http://localhost:80](http://localhost:80)
 
 Será localhost o el nombre o IP que tenga la máquina host, la máquina real.
 
-Entonces, cuando tenemos un contenedor con esta arquitecturra, tendremos que indicarle cómo podemos usar ese puerto y cómo podemos publicarlo, exponerlo, para que los clientes accedan al servicio del contenedor.
+Entonces, cuando tenemos un contenedor que tiene esta arquitecturra, tendremos que indicarle cómo podemos usar ese puerto y cómo podemos publicarlo, exponerlo, para que los clientes accedan al servicio del contenedor.
 
-En DockerHub, cuando las imagenes presentan este tipo de arquitectura, normalmente, indican como crear un docker y cómo se deben exponer los puertos.
+## 3.2 Gestionar puertos para acceder al contenedor
+
+Vamos a hacer un ejemplo con Nginx
+
+Para ello vamos a DockerHub y buscamos Nginx.
+
+En DockerHub, cuando se trate de un producto al que necesitamos acceder por algún puerto, lo normal es que en la descripción se indiquen las instrucciones necesarias para exponer los puertos. Es decir, cómo podemos acceder al producto dentro del contenedor desde la máquina host.
+
+En el caso de nginx, podemos ver que dentro del contenedor va a utilizar el puerto 80 y podemos acceder desde el host a través del puerto 8080.
+
+Ahora vamos a crear un contenedor de nginx en nuestro docker.
+
+Lo primero es descargar la imagen
+
+```console
+$ sudo docker pull nginx
+
+Using default tag: latest
+latest: Pulling from library/nginx
+d121f8d1c412: Pull complete 
+66a200539fd6: Pull complete 
+e9738820db15: Pull complete 
+d74ea5811e8a: Pull complete 
+ffdacbba6928: Pull complete 
+Digest: sha256:fc66cdef5ca33809823182c9c5d72ea86fd2cef7713cf3363e1a0b12a5d77500
+Status: Downloaded newer image for nginx:latest
+docker.io/library/nginx:latest
+```
+
+Vamos a comprobar que la imagen se ha descargado
+
+```console
+$ sudo docker images
+
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+nginx               latest              992e3b7be046        5 days ago          133MB
+```
+
+Ahora vamos a configurar un contendor que podamos acceder al Nginx que hay dentro, porque sino no podríamos acceder a él.
+
+```console
+$ sudo docker run -d -P nginx
+
+30bfdba664453f0184d9f7c42c1e451ab2307b834427d7944d5a4decd858de0c
+```
+
+Con `-P` lo que hace es que todos los puertos que estén dentro del contenedor los convertimos en públicos, lo que quiere decir es que se puede acceder desde fuera a ellos. Y Docker lo que va a hacer es que le va a asignar un puerto dentro de la máquina principal.
+
+Vamos a ver que el contendor se está ejecutando
+
+```console
+$ sudo docker ps
+
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                   NAMES
+30bfdba66445        nginx               "/docker-entrypoint.…"   59 seconds ago      Up 58 seconds       0.0.0.0:32768->80/tcp   compassionate_merkle
+```
+
+Vamos a fijarnos en la columna PORTS.
+
+Con `0.0.0.0` significa que vamos a poder acceder por cualquier IP que tenga la máquina principal. Por ejemplo si la máquina principal tiene 2 direcciones IP y queremos que se acceda sólo por una de ellas, entonces aquí pondríamos la dirección IP por la que queremos que se acceda.
+
+Luego lo que dice es que el puerto de la máquina principal 32768 va a estar mapeado con el puerto 80 del contenedor. Entonces cada vez que en la máquina principal accedamos a ese puerto, al 32768, en realidad vamos a estar accediendo al puerto 80 del contenedor.
+
+[http://localhost:32768](http://localhost:32768)
+
+Y vemos que hemos accedido a Nginx.
+
+El inconveniente es que Docker le ha asignado un puerto aleatorio (en realidad empiezan en `32768`), y eso significa que no tenemos mucho control sobre el puerto cuando arranco el contenedor.
+
+Lo mejor es hacer lo siguiente:
+
+```console
+$ sudo docker run -d --name nginx2 -p 8080:80 nginx
+```
+
+Con `-p` le estoy diciendo que al puerto 80 de este contenedor, nginx2, voy a poder acceder a través del puerto 8080 de la máquina física.
+
+Entonces para acceder a él:
+
+[http://localhost:8080](http://localhost:8080)
+
+Entonces, con `-P` si queremos que Docker se encargue del mapeo de puertos o `-p` para indicar el mapeo de puertos que yo quiero.
