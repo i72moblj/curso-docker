@@ -33,6 +33,7 @@
     - [Redes de tipo none, que tienen un driver null](redes-de-tipo-none-que-tienen-un-driver-null)
   - [3.4 Inspeccionar una red](#34-inspeccionar-una-red)
   - [3.5 Crear una nueva red](#35-crear-una-nueva-red)
+  - [3.6 Asociar contenedores a una red](#36-asociar-contenedores-a-una-red)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -3029,3 +3030,137 @@ $ sudo docker inspect red3
     }
 ]
 ```
+## 3.6 Asociar contenedores a una red
+
+Hemos visto que en las redes de tipo bridge, los contenedores que están en ella pueden conectarse entre sí.
+
+Ahora vamos a ver cómo podemos asociar un contenedor a una determinada red.
+
+Vamos a crear un contenedor en modo interactivo basado en la imagen de ubuntu, con el nombre ubuntua y lo vamos a asociar a la red1
+
+```console
+$ sudo docker run -it --name ubuntua --network red1 ubuntu
+
+root@f18258103b30:/# 
+```
+
+Si ahora inspeccionamos el contenedor ubuntua y miramos la parte de la red
+
+```console
+$ sudo docker inspect ubuntua | grep IPAdd
+
+            "SecondaryIPAddresses": null,
+            "IPAddress": "",
+                    "IPAddress": "172.18.0.2",
+```
+
+Vemos la IP que le ha asignado es la 172.18.0.2 y es porque cuando creamos la red1 le asignamos el rango de direcciones 172.18...
+
+Ahora vamos a crear otro contenedor en modo background, basado en la imagen de nginx, con el nombre nginx4 y también lo vamos a asignar a la red1
+
+```console
+$ sudo docker run -d --name nginx4 --network red1 nginx
+
+d3dd4657b41b09a0a19c46d488a6c9790ff4d3cf92331cb57bd9bb53caa36d02
+```
+
+Vamos a ver la IP que le ha asignado
+
+```console
+$ sudo docker inspect nginx4 | grep IPAdd
+
+            "SecondaryIPAddresses": null,
+            "IPAddress": "",
+                    "IPAddress": "172.18.0.3",
+```
+
+Y ahora vamos a hacer un ping desde el contenedor ubuntua al nginx4
+
+**Nota:** 
+> ping no viene instalado, hay que hacer `apt update` y `apt install iputils-ping`
+
+```console
+root@f18258103b30:/# ping 172.18.0.3
+
+PING 172.18.0.3 (172.18.0.3) 56(84) bytes of data.
+64 bytes from 172.18.0.3: icmp_seq=1 ttl=64 time=0.158 ms
+64 bytes from 172.18.0.3: icmp_seq=2 ttl=64 time=0.077 ms
+64 bytes from 172.18.0.3: icmp_seq=3 ttl=64 time=0.081 ms
+64 bytes from 172.18.0.3: icmp_seq=4 ttl=64 time=0.081 ms
+^C
+--- 172.18.0.3 ping statistics ---
+4 packets transmitted, 4 received, 0% packet loss, time 3061ms
+rtt min/avg/max/mdev = 0.077/0.099/0.158/0.033 ms
+```
+
+Y podemos comprobar que llega sin problemas.
+
+Y vemos que todos los contenedores que yo creo dentro de la misma red, comparten el mismo rango de IPs.
+
+Aparte de poder asociar un contenedor a una red cuando lo arranco, también lo puedo hacer con el `docker network connect` y lo bueno del `docker network connect` es que lo puedo hacer en caliente, online.
+
+Vamos a conectar el contenedor ubuntua a la red2
+
+```console
+$ sudo docker network connect red2 ubuntua
+```
+
+Lo añade a la red2, pero no lo quita de la red anterior, la red1
+
+Si ahora inspeccionamos la dirección IP del contenedor ubuntua
+
+```console
+$ sudo docker inspect ubuntua | grep IPAdd
+
+            "SecondaryIPAddresses": null,
+            "IPAddress": "",
+                    "IPAddress": "172.18.0.2",
+                    "IPAddress": "172.57.0.2",
+```
+
+Vemos que ahora tiene 2 direcciones IP, por lo que el contenedor *ubuntua* puede trabajar tanto con contenedores de la *red1* como con contenedores de la *red2*.
+
+Como vemos, trabajar con redes de tipo bridge personalizadas me ofrece muchas ventajas.
+
+Si quiero desconectar el contenedor *ubuntua* de la *red2*
+
+```console
+$ sudo docker network disconnect red2 ubuntua
+```
+
+Por lo que si ahora miro su dirección IP
+
+```console
+$ sudo docker inspect ubuntua | grep IPAdd
+
+            "SecondaryIPAddresses": null,
+            "IPAddress": "",
+                    "IPAddress": "172.18.0.2",
+```
+
+Y vemos que me lo ha quitado de la red *red2* y que sólo tiene la IP que pertenece a la red *red1*.
+
+Vamos a comprobar ahora que cuando creamos una red personalizada, Docker genera un DNS interno que nos permite acceder a los contenedores con el nombre que le pusimos con la opción –name al crearlos.
+
+Por lo que dentro de un contenedor podemos hacer ping por su nombre a otro que esté corriendoo en la misma red.
+
+Entonces, desde *ubuntua* podemos hacer un ping al contenedor *nginx4* por su nombre
+
+```console
+root@f18258103b30:/# ping nginx4
+
+PING nginx4 (172.18.0.3) 56(84) bytes of data.
+64 bytes from nginx4.red1 (172.18.0.3): icmp_seq=1 ttl=64 time=0.119 ms
+64 bytes from nginx4.red1 (172.18.0.3): icmp_seq=2 ttl=64 time=0.079 ms
+64 bytes from nginx4.red1 (172.18.0.3): icmp_seq=3 ttl=64 time=0.078 ms
+^C
+--- nginx4 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2037ms
+rtt min/avg/max/mdev = 0.078/0.092/0.119/0.019 ms
+```
+
+Y vemos que funciona perfectamente, ya que la red personalizada se encarga
+de gestionar los nombre de los contenedores
+
+**Ejercicio Práctico:**
+> Práctica 09 - Creación de redes y asociación de contenedores.pdf
