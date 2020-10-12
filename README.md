@@ -34,6 +34,7 @@
   - [3.4 Inspeccionar una red](#34-inspeccionar-una-red)
   - [3.5 Crear una nueva red](#35-crear-una-nueva-red)
   - [3.6 Asociar contenedores a una red](#36-asociar-contenedores-a-una-red)
+  - [3.7 Enlazar contenedores a la red bridge por defecto con *--link*](#-37-enlazar-contenedores-a-la-red-bridge-por-defecto-con---link)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -3164,3 +3165,311 @@ de gestionar los nombre de los contenedores
 
 **Ejercicio Práctico:**
 > Práctica 09 - Creación de redes y asociación de contenedores.pdf
+
+## 3.7 Enlazar contenedores con la red bridge por defecto con *--link*
+
+Vamos a ver cómo enlazar contenedores y lo vamos a hacer de dos maneras:
+
+- con la red bridge por defecto
+- con las redes de tipo bridge personalizadas
+
+Y veremos que hay una gran diferencia entre las dos.
+
+Para enlazar contenedores a la red bridge por defecto podemos utilizar un componente que se llama *legacy* y es la opción `--link`.
+
+Y si se lee la [documentación oficial](https://docs.docker.com/network/links/), vemos que se recomienda no utilizarlos. 
+
+Entonces, cuando queremos enlazar contenedores a la red bridge por defecto, vamos a tener que utilizar la opción `--link` y veremos que cuando utilizamos contenedores asociados a otra red, esta opción ya no es necesaria.
+
+> **Tip:** Si tenemos muchos contenedores y queremos saber el número de contenedores que tenemos, podemos utilizar el comando de linux `wc`, *word counter*, y con la opción `-l`, cuenta el número de líneas
+
+```console
+$ sudo docker ps -a | wc -l
+
+10
+```
+
+Vemos los contenedores que tenemos arrancados
+
+```console
+$ sudo docker ps
+
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                      NAMES
+6c5b70b10f25        mongo               "docker-entrypoint.s…"   About an hour ago   Up About an hour    27017/tcp                  mongo3
+7500920968f8        mongo               "docker-entrypoint.s…"   About an hour ago   Up About an hour    0.0.0.0:27018->27017/tcp   mongo2
+84ea2d34a2ea        mongo               "docker-entrypoint.s…"   About an hour ago   Up About an hour    0.0.0.0:27017->27017/tcp   mongo1
+d3dd4657b41b        nginx               "/docker-entrypoint.…"   2 hours ago         Up 2 hours          80/tcp                     nginx4
+```
+
+Paramos todos los contenedores, recordemos con sudo docker ps -q nos devuelve los ids de los contenedores que se están ejecutando
+
+```console
+$ sudo docker container stop `sudo docker ps -q`
+```
+
+En Linux podemos hacer (con las comillas simples invertidas). Lo que hace es que se ejecuta el comando de dentro y el resultado se lo pasa al comando de fuera.
+
+Y los borramos todos
+
+```console
+sudo docker rm `sudo docker ps -aq`
+```
+
+### Enlazar contenedores con la red bridge por defecto
+
+Para el ejemplo vamos a utilizar la imagen Busybox, que es un sistema Linux muy pequeñito utilizado normalmente para probar componentes.
+
+Vamos a crear un contenedor interactivo que se llame *b1* a partir de la imagen *busybox* y le decimos que cuando acabemos con él, que lo borre.
+
+```console
+$ sudo docker run -it --rm --name b1 busybox
+
+/ # 
+```
+
+Recordemos que la opción `--rm` se utiliza para que cuando se pare el contenedor se borre automáticamente y no se quede almacenado como parado.
+
+Vamos a comprobar que se ha creado
+
+```console
+$ sudo docker ps
+
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
+477a68e1d5a0        busybox             "sh"                2 minutes ago       Up 2 minutes                            b1
+
+```
+
+Y este contenedor pertenece a la red bridge por defecto porque no se le ha asignado a ninguna otra red.
+
+Si inspeccionamos la red con nombre *bridge*, que es la red bridge por defecto
+
+```console
+$ sudo docker network inspect bridge
+
+[
+    {
+        "Name": "bridge",
+        "Id": "a41535dfc3b35f8b3413d918ac1558ffb9b48744d23b06a2f8813a030843aa6f",
+        "Created": "2020-10-12T10:37:49.833682534+02:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": null,
+            "Config": [
+                {
+                    "Subnet": "172.17.0.0/16",
+                    "Gateway": "172.17.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {
+            "477a68e1d5a03e22a88f5dec4f926089c07cb2149730f346da7c7c78236d2c1b": {
+                "Name": "b1",
+                "EndpointID": "7bc043d845b2f40bc6308d4fec54d327437157f7bc01cbf6fb416ba9590a6d26",
+                "MacAddress": "02:42:ac:11:00:02",
+                "IPv4Address": "172.17.0.2/16",
+                "IPv6Address": ""
+            }
+        },
+        "Options": {
+            "com.docker.network.bridge.default_bridge": "true",
+            "com.docker.network.bridge.enable_icc": "true",
+            "com.docker.network.bridge.enable_ip_masquerade": "true",
+            "com.docker.network.bridge.host_binding_ipv4": "0.0.0.0",
+            "com.docker.network.bridge.name": "docker0",
+            "com.docker.network.driver.mtu": "1500"
+        },
+        "Labels": {}
+    }
+]
+```
+
+Podemos comprobar que aparece el contenedor *b1* que hemos creado.
+
+> **Tip:** Es muy importante que al crear un contenedor le pongamos un nombre, porque sino, le va a asignar un nombre aleatorio que es poco descriptivo y en el `docker inspect` va a aparecer por el ID del contenedor, cosa que no es muy útil, no me da mucha pista, tendría que ir a ver a qué contenedor pertenece ese ID. Esto se aplica a todo lo que se le pueda dar un nombre porque podemos inspeccionar contenedores, redes, ...
+
+Vamos a crear un segundo contenedor con las mismas características, pero llamado `b2`
+
+```console
+$ sudo docker run -it --rm --name b2 busybox
+
+/ # 
+```
+
+Dentro de los contenedores, como son Linux, podemos saber qué IP les ha puesto con el comando `cat /etc/hosts`.
+
+Dentro del contenedor *b1*
+
+```console
+# cat /etc/hosts 
+
+127.0.0.1	localhost
+::1	localhost ip6-localhost ip6-loopback
+fe00::0	ip6-localnet
+ff00::0	ip6-mcastprefix
+ff02::1	ip6-allnodes
+ff02::2	ip6-allrouters
+172.17.0.2	477a68e1d5a0
+```
+
+Dentro del contenedor *b2*
+
+```console
+# cat /etc/hosts
+
+127.0.0.1	localhost
+::1	localhost ip6-localhost ip6-loopback
+fe00::0	ip6-localnet
+ff00::0	ip6-mcastprefix
+ff02::1	ip6-allnodes
+ff02::2	ip6-allrouters
+172.17.0.3	4bbedaa44035
+```
+
+Vemos que al contenedor *b1* le ha asignado la IP 172.17.0.2 y al conteneodr *b2* le ha asignado la IP 172.17.0.3
+
+Entonces aquí ya puedo empezar a hacer pruebas
+
+Si hacemos un ping desde el contenedor *b1* al contenedor *b2* por su IP
+
+```console
+$ ping 172.17.0.3
+
+PING 172.17.0.3 (172.17.0.3): 56 data bytes
+64 bytes from 172.17.0.3: seq=0 ttl=64 time=0.131 ms
+64 bytes from 172.17.0.3: seq=1 ttl=64 time=0.115 ms
+64 bytes from 172.17.0.3: seq=2 ttl=64 time=0.120 ms
+64 bytes from 172.17.0.3: seq=3 ttl=64 time=0.123 ms
+^C
+--- 172.17.0.3 ping statistics ---
+4 packets transmitted, 4 packets received, 0% packet loss
+round-trip min/avg/max = 0.115/0.122/0.131 ms
+```
+
+Vemos que llegamos. Y a la inversa ocurre igual.
+
+Pero si intentamos hacer un ping del contenedor *b1* al contenedor *b2* por su nombre
+
+```console
+$ ping b2
+
+ping: bad address 'b2'
+```
+
+Vemos que nos da error
+
+Eso es porque en la red bridge por defecto sólo podemos acceder a un contendor a través de su IP y no a través de su nombre y eso es porque no tiene un DNS interno para relacionar IPs con nombres de los contenedores
+
+Pero al crear un contenedor (sin asignarle una red de tipo bridge presonalizada, por lo que utilizará la red de tipo bridge por defecto) yo puedo enlazarlo con otro contenedor que pertenezca a la red bridge por defecto. Incluso puedo asignarle un alias, de tal forma que sí pueda referirme a él a través de su nombre.
+
+Vamos a crear un tercer contenedor interactivo, que se borre cuando se pare, que se llame `b3` y que lo enlace con el contenedor `b1` con el alias `maquina1` (*maquina1* es como se va a dirigir al contenedor *b1*)
+
+```console
+$ sudo docker run -it --rm --name b3 --link b1:maquina1 busybox
+
+/ # 
+```
+
+Si ejecutamos el comando `cat /etc/hosts` en el contenedor *b3*
+
+```console
+# cat /etc/hosts
+
+127.0.0.1	localhost
+::1	localhost ip6-localhost ip6-loopback
+fe00::0	ip6-localnet
+ff00::0	ip6-mcastprefix
+ff02::1	ip6-allnodes
+ff02::2	ip6-allrouters
+172.17.0.2	maquina1 477a68e1d5a0 b1
+172.17.0.4	d3a5d500755c
+```
+
+Puedo comprobar que no sólo me ha creado la IP propia del contenedor b3, sino que también me ha creado un enlace contra la otra máquina y puedo referirme a ella a través de su alias, su nombre o su ID
+
+Entonces yo puedo acceder al contenedor *b1* desde el contenedor *b3*
+
+a través de su IP
+
+```console
+# ping 172.17.0.2
+
+PING 172.17.0.2 (172.17.0.2): 56 data bytes
+64 bytes from 172.17.0.2: seq=0 ttl=64 time=0.142 ms
+64 bytes from 172.17.0.2: seq=1 ttl=64 time=0.125 ms
+64 bytes from 172.17.0.2: seq=2 ttl=64 time=0.126 ms
+^C
+--- 172.17.0.2 ping statistics ---
+3 packets transmitted, 3 packets received, 0% packet loss
+round-trip min/avg/max = 0.125/0.131/0.142 ms
+```
+
+a través de su nombre
+
+```console
+# ping b1
+
+PING b1 (172.17.0.2): 56 data bytes
+64 bytes from 172.17.0.2: seq=0 ttl=64 time=0.190 ms
+64 bytes from 172.17.0.2: seq=1 ttl=64 time=0.121 ms
+64 bytes from 172.17.0.2: seq=2 ttl=64 time=0.121 ms
+^C
+--- b1 ping statistics ---
+3 packets transmitted, 3 packets received, 0% packet loss
+round-trip min/avg/max = 0.121/0.144/0.190 ms
+```
+
+o a través de su alias
+
+```console
+# ping maquina1
+
+PING maquina1 (172.17.0.2): 56 data bytes
+64 bytes from 172.17.0.2: seq=0 ttl=64 time=0.133 ms
+64 bytes from 172.17.0.2: seq=1 ttl=64 time=0.123 ms
+64 bytes from 172.17.0.2: seq=2 ttl=64 time=0.118 ms
+64 bytes from 172.17.0.2: seq=3 ttl=64 time=0.120 ms
+^C
+--- maquina1 ping statistics ---
+4 packets transmitted, 4 packets received, 0% packet loss
+round-trip min/avg/max = 0.118/0.122/0.133 ms
+```
+
+o a través de su ID
+
+```console
+# ping 477a68e1d5a0
+
+PING 477a68e1d5a0 (172.17.0.2): 56 data bytes
+64 bytes from 172.17.0.2: seq=0 ttl=64 time=0.132 ms
+64 bytes from 172.17.0.2: seq=1 ttl=64 time=0.119 ms
+64 bytes from 172.17.0.2: seq=2 ttl=64 time=0.119 ms
+^C
+--- 477a68e1d5a0 ping statistics ---
+3 packets transmitted, 3 packets received, 0% packet loss
+round-trip min/avg/max = 0.119/0.123/0.132 ms
+```
+
+Entonces la opción `--link` es muy interesante, porque me permite enlazar contra otro contenedor y a su vez me añade automáticamente en el `/etc/hosts` lo necesario para poder conectarme.
+
+El inconveniente es que si me voy a la máquina *b1* e intengo hacer un ping contra *b3*, pues no me funciona, porque *b1* no sabe lo que es *b3*, tendría que hacerlo a través de su IP, por lo que los enlaces son unidireccionales en ese sentido.
+
+```console
+# ping b3
+
+ping: bad address 'b3'
+```
+
+En resumen, cuando trabajo con la red bridge predefinida, tengo que utilizar la claúsula `--link` para enlazar el contenedor que estoy creando con el contenedor que quiero utilizar. Entonces puede ser útil pero se queda un poco cojo.
+
+**Ejercicio Práctico:**
+> Práctica 10 - Enlazar con --link.pdf
