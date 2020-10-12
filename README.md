@@ -32,6 +32,7 @@
     - [Redes de tipo host, que tienen un driver host](#redes-de-tipo-host-que-tienen-un-driver-host)
     - [Redes de tipo none, que tienen un driver null](redes-de-tipo-none-que-tienen-un-driver-null)
   - [3.4 Inspeccionar una red](#34-inspeccionar-una-red)
+  - [3.5 Crear una nueva red](#35-crear-una-nueva-red)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -2501,6 +2502,16 @@ Podemos ver que:
 
 Entonces podemos ver que es muy sencillo obtener información acerca de la red del contenedor a través del comando `docker inspect`.
 
+También podemos conocer el mapeo de puertos de un contenedor con la máquina host con `docker port`
+
+```console
+$ sudo docker port nginx2
+
+80/tcp -> 0.0.0.0:8080
+```
+
+Lo que muestra es que el puerto 80 del contenedor está mapeado con el puerto 8080 de cualquier IP de la máquina host. Recordemos que 0.0.0.0 indicaba que aceptaba conexiones desde cualquier IP de la máquina host.
+
 ## 3.4 Inspeccionar una red
 
 En el capítulo anterior hemos visto cómo podemos conocer las características o propiedades de un contenedor respecto a la red donde se encuentra, como la dirección IP, mapeo de puertos, ...
@@ -2518,7 +2529,7 @@ NETWORK ID          NAME                DRIVER              SCOPE
 2006762eef86        none                null                local
 ```
 
-Y vamos a inspeccionar la red con nombre bridge
+Y vamos a inspeccionar la red bridge (bridge se refiere al nombre bridge, no al driver bridge)
 
 ```console
 $ sudo docker network inspect bridge
@@ -2590,7 +2601,7 @@ Muestra las propiedades y características de la red:
 - el driver que está utilizando: *bridge*
 - la subred, que nos va a indicar el rango de IPs que puede ir asignando a los contenedores que se vayan asociando a la red: *172.17.0.0/16*
 - La puerta de enlace, cuya IP es la primera del rango de direcciones IP: *172.17.0.1*
-- Los contenedores asociados a esta red que están en ejecución. Si no se están ejecutando no aparecen. *compassionate_merkle*, *nginx3* y *nginx2*
+- Los contenedores asociados a esta red que están en ejecución. Si no se están ejecutando no aparecen. *compassionate_merkle*, *nginx3* y *nginx2*. El orden en que aparecen los contenedores es el orden alfabético del ID que se le asocia al crearlos.
 
 Entonces si yo quiero saber cuántos contenedores están asociados a una determinada red, lo mejor es mirarlo en la propia red y no ir contenedor a contenedor.
 
@@ -2739,3 +2750,282 @@ A medida que se van asignando contenedores a una red le va a ir asignando direcc
 **Ejercicio Práctico:**
 > Práctica 08 - Trabajar con puertos y redes.pdf
 
+## 3.5 Crear una nueva red
+
+Recordemos que teníamos 3 redes: bridge, host y none
+
+```console
+$ sudo docker network ls
+
+NETWORK ID          NAME                DRIVER              SCOPE
+a41535dfc3b3        bridge              bridge              local
+37250215cc83        host                host                local
+2006762eef86        none                null                local
+```
+
+Cuando creamos una red hay que indicarle un par de cosas:
+
+- el nombre que va a tener
+- el driver al que va a pertenecer
+
+Tenemos que tener en cuenta que cuando creamos una red de tipo bridge, nuestra, que no sea la red bridge por defecto, tiene más características que la red bridge por defecto.
+
+La red bridge por defecto tiene una serie de limitaciones, como por ejemplo que para enlazar contenedores tenemos que utilizar la opción "link", que es un proceso que se considera de tipo *legacy*, mientras que si creamos una red bridge nuestra, los contenedores que asociemos a esa red, exponen todos sus puertos entre ellos y no hay que hacer nada adicional, sin embargo con la red bridge por defecto sí que tenemos que configurarlo.
+
+Vamos a ver las opciones del comando `docker network create` que es el comando con el que creamos una red.
+
+```console
+$ sudo docker network create --help
+
+Usage:	docker network create [OPTIONS] NETWORK
+
+Create a network
+
+Options:
+      --attachable           Enable manual container attachment
+      --aux-address map      Auxiliary IPv4 or IPv6 addresses used by
+                             Network driver (default map[])
+      --config-from string   The network from which copying the configuration
+      --config-only          Create a configuration only network
+  -d, --driver string        Driver to manage the Network (default "bridge")
+      --gateway strings      IPv4 or IPv6 Gateway for the master subnet
+      --ingress              Create swarm routing-mesh network
+      --internal             Restrict external access to the network
+      --ip-range strings     Allocate container ip from a sub-range
+      --ipam-driver string   IP Address Management Driver (default "default")
+      --ipam-opt map         Set IPAM driver specific options (default map[])
+      --ipv6                 Enable IPv6 networking
+      --label list           Set metadata on a network
+  -o, --opt map              Set driver specific options (default map[])
+      --scope string         Control the network's scope
+      --subnet strings       Subnet in CIDR format that represents a
+                             network segment
+```
+
+Aunque hay muchas opciones y no vamos a verlas todas, pero vemos que hay algunas muy interesantes
+
+La opción `-d`, el driver, que puede ser bridge, host o none, aunque hay más como el "overlay", que se utiliza para cuando tenemos docker en cluster. También podemos tener drivers personalizados. Por defecto, si no le decimos nada, va a ser de tipo bridge.
+
+La opción `--gateway`, para indicarle qué tipo de subred va a coger. Por ejemplo de la 172.18..., lo que sea.
+
+Vamos a crear una red muy sencillita
+
+```console
+$ sudo docker network create red1
+
+4dd04c1b445f9f5f0b2b6a9302c9992ca7ecadf20a002f2cedd8bf62449c05ea
+```
+
+Vemos que nos devuelve el ID de esa red *red1*
+
+Si ahora miramos las redes que tenemos
+
+```console
+$ sudo docker network ls
+
+NETWORK ID          NAME                DRIVER              SCOPE
+a41535dfc3b3        bridge              bridge              local
+37250215cc83        host                host                local
+2006762eef86        none                null                local
+4dd04c1b445f        red1                bridge              local
+```
+
+Podemos comprobar que tenemos otra red de tipo bridge y que se llama red1
+
+Antes de seguir, dentro de la máquina host, la máquina real, vamos a ver el comando `nmcli` (*network manager command line interface*), que nos va a decir las conexiones que tenemos dentro del sistema operativo.
+
+- `nmcli`: Muestra todas las conexiones independientemente del estado
+- `nmcli con`: Muestra as conexiones activas
+
+Si ejecutamos el comando `nmcli con`
+
+```console
+$ nmcli con
+
+NAME                UUID                                  TYPE      DEVICE      
+br-4dd04c1b445f     47703c50-8127-4598-8538-4a13650196d3  bridge    br-4dd04c1b4
+Wired connection 1  8726f9ac-2ef1-44d7-9b05-c3dc9a75ed83  ethernet  enp0s31f6	
+```
+
+Vemos que está la br-4dd04c1b445f y que se corresponde con el NETWORK ID de la conexión de red que hemos creado. (`br` de bridge).
+
+Si ejecutamos el comando `nmcli` para que nos aparezcan todas las conexiones de red, independientemente del estado que tengan
+
+```console
+$ nmcli
+
+enp0s31f6: conectado to Wired connection 1
+        "Intel Ethernet"
+        ethernet (e1000e), 30:9C:23:3E:E5:22, hw, mtu 1500
+        ip4 default
+        inet4 192.168.1.71/24
+        route4 0.0.0.0/0
+        route4 192.168.1.0/24
+        inet6 fe80::329c:23ff:fe3e:e522/64
+        route6 fe80::/64
+        route6 ff00::/8
+
+br-4dd04c1b445f: conectado to br-4dd04c1b445f
+        "br-4dd04c1b445f"
+        bridge, 02:42:6A:6A:DE:23, sw, mtu 1500
+        inet4 172.18.0.1/16
+        route4 172.18.0.0/16
+
+docker0: sin gestión
+        "docker0"
+        bridge, 02:42:6C:0C:08:FF, sw, mtu 1500
+
+lo: sin gestión
+        "lo"
+        loopback (unknown), 00:00:00:00:00:00, sw, mtu 65536
+
+DNS configuration:
+        servers: 80.58.61.250 80.58.61.254
+        interface: enp0s31f6
+
+Use "nmcli device show" to get complete information about known devices and
+"nmcli connection show" to get an overview on active connection profiles.
+
+Consult nmcli(1) and nmcli-examples(5) manual pages for complete usage details.	
+```
+
+Observamos que aparte de la conexión *br-4dd04c1b445f*, existe una que es *docker0*, y que es la red bridge por defecto.
+
+Si además queremos ver las IPs que tenemos,
+
+```console
+$ ip a | more
+
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+2: enp0s31f6: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 30:9c:23:3e:e5:22 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.1.71/24 brd 192.168.1.255 scope global dynamic noprefixroute enp0s31f6
+       valid_lft 40936sec preferred_lft 40936sec
+    inet6 fe80::329c:23ff:fe3e:e522/64 scope link noprefixroute 
+       valid_lft forever preferred_lft forever
+3: docker0: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc noqueue state DOWN group default 
+    link/ether 02:42:6c:0c:08:ff brd ff:ff:ff:ff:ff:ff
+    inet 172.17.0.1/16 brd 172.17.255.255 scope global docker0
+       valid_lft forever preferred_lft forever
+4: br-4dd04c1b445f: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc noqueue state DOWN group default 
+    link/ether 02:42:6a:6a:de:23 brd ff:ff:ff:ff:ff:ff
+    inet 172.18.0.1/16 brd 172.18.255.255 scope global br-4dd04c1b445f
+       valid_lft forever preferred_lft forever
+```
+
+Vemos que está:
+
+- *docker0*, que estaría representando a la red bridge por defecto de docker. El rango que está utilizando 172.17 por eso nos ponía esas direcciones IP a los contenedores.
+
+- *br-4dd04c1b445f*, que representa a la red red1 que hemos creado y que por defecto le ha puesto la subred 172.18 y eso lo que quiere decir es que cuando yo asocie un contenedor a esa red, le va a dar una dirección IP 172.18....
+
+Eso lo podemos comprobar que es así al inspeccionar la red *red1*, en el apartado Subnet
+
+```console
+$ sudo docker network inspect red1
+
+[
+    {
+        "Name": "red1",
+        "Id": "4dd04c1b445f9f5f0b2b6a9302c9992ca7ecadf20a002f2cedd8bf62449c05ea",
+        "Created": "2020-10-12T10:50:18.842945166+02:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": {},
+            "Config": [
+                {
+                    "Subnet": "172.18.0.0/16",
+                    "Gateway": "172.18.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {},
+        "Options": {},
+        "Labels": {}
+    }
+]
+```
+
+Docker dice que es preferible que crees tus propias redes porque todos los contenedores que se asocien a la red van a publicar o van a ver sus puertos de manera automática entre sí.
+
+Podemos poner otra serie de opciones, por ejemplo
+
+Podemos especificar el rango de IPs de la Subnet y la puerta de enlace Gateway
+
+```console
+$ sudo docker network create --subnet=172.57.0.0/16 --gateway=172.57.0.1 red2
+
+f82c4fc40f9e051c5e343921e4067fd7afe390a2fd570b6b2ab1bd6707a5914e
+```
+
+Y si queremos crear una nueva red indicándole el rango de direcciones IP (Subnet) y la puerta de enlace (Gateway) y la dirección IP a partir de la cual le va ir asociando IPs a los contenedores que pertenezcan a esa red
+
+```console
+$ sudo docker network create --subnet=172.30.0.0/16 --gateway=172.30.0.1 --ip-range=172.30.10.0/24 red3
+
+249cc99d9b0c07edd469092a87034b673bd457932bc1e8ee6326f89b97700ed5
+```
+Con el comando `nmcli con` podemos ver que se han creado las nuevas redes de tipo bridge para dar soporte a estas nuevas redes *red2* y *red3* que acabamos de crear.
+
+```console
+$ nmcli con
+
+NAME                UUID                                  TYPE      DEVICE          
+br-249cc99d9b0c     d204972b-27d9-491f-b7c3-6261e9e1ba81  bridge    br-249cc99d9b0c 
+br-4dd04c1b445f     47703c50-8127-4598-8538-4a13650196d3  bridge    br-4dd04c1b445f 
+br-f82c4fc40f9e     842cc610-be68-426a-b962-87a909ce81cd  bridge    br-f82c4fc40f9e 
+Wired connection 1  8726f9ac-2ef1-44d7-9b05-c3dc9a75ed83  ethernet  enp0s31f6 
+```
+
+También podemos comprobar el rango de IPs y la puerta de enlace inspeccionando la red *red3*
+
+```console
+$ sudo docker inspect red3
+
+[
+    {
+        "Name": "red3",
+        "Id": "249cc99d9b0c07edd469092a87034b673bd457932bc1e8ee6326f89b97700ed5",
+        "Created": "2020-10-12T11:45:57.633299512+02:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": {},
+            "Config": [
+                {
+                    "Subnet": "172.30.0.0/16",
+                    "IPRange": "172.30.10.0/24",
+                    "Gateway": "172.30.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {},
+        "Options": {},
+        "Labels": {}
+    }
+]
+```
