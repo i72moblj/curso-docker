@@ -30,11 +30,14 @@
   - [3.3 Redes en Docker](#33-redes-en-docker)
     - [Redes de tipo bridge, que tienen un driver bridge](#redes-de-tipo-bridge-que-tienen-un-driver-bridge)
     - [Redes de tipo host, que tienen un driver host](#redes-de-tipo-host-que-tienen-un-driver-host)
-    - [Redes de tipo none, que tienen un driver null](redes-de-tipo-none-que-tienen-un-driver-null)
+    - [Redes de tipo none, que tienen un driver null](#redes-de-tipo-none-que-tienen-un-driver-null)
   - [3.4 Inspeccionar una red](#34-inspeccionar-una-red)
   - [3.5 Crear una nueva red](#35-crear-una-nueva-red)
   - [3.6 Asociar contenedores a una red](#36-asociar-contenedores-a-una-red)
-  - [3.7 Enlazar contenedores a la red bridge por defecto con *--link*](#-37-enlazar-contenedores-a-la-red-bridge-por-defecto-con---link)
+  - [3.7 Enlazar contenedores a la red bridge por defecto con *--link*](#37-enlazar-contenedores-a-la-red-bridge-por-defecto-con---link)
+    - [Enlazar contenedores con la red bridge por defecto](#enlazar-contenedores-con-la-red-bridge-por-defecto)
+  - [3.8 Enlazar contenedores en redes personalizadas](#38-enlazar-contenedores-en-redes-personalizadas)
+    - [Ejemplo enlazar contenedores. WordPress y MySQL](#Ejemplo-enlazar-contenedores-WordPress-y-MySQL)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -3166,7 +3169,7 @@ de gestionar los nombre de los contenedores
 **Ejercicio Práctico:**
 > Práctica 09 - Creación de redes y asociación de contenedores.pdf
 
-## 3.7 Enlazar contenedores con la red bridge por defecto con *--link*
+## 3.7 Enlazar contenedores a la red bridge por defecto con *--link*
 
 Vamos a ver cómo enlazar contenedores y lo vamos a hacer de dos maneras:
 
@@ -3473,3 +3476,301 @@ En resumen, cuando trabajo con la red bridge predefinida, tengo que utilizar la 
 
 **Ejercicio Práctico:**
 > Práctica 10 - Enlazar con --link.pdf
+
+## 3.8 Enlazar contenedores en redes personalizadas
+
+Vamos a ver cómo trabajar con contenedores enlazados en una red de tipo bridge creada por nosotros.
+
+Recordemos que teníamos creadas dos redes, la *red1* y la *red2*
+
+```console
+$ sudo docker network ls
+
+NETWORK ID          NAME                DRIVER              SCOPE
+5a24f36afb9d        bridge              bridge              local
+774c8fbbcfaf        host                host                local
+f79b96876cfa        none                null                local
+4f38703504be        red1                bridge              local
+4e7ecd0c7748        red2                bridge              local
+```
+
+Para nuestro ejemplo vamos a utilizar la imagen de MySQL y si leemos la documentación oficial de la imagen MySQL de Docker Hub, vemos que para crear un contenedor de esta imagen y que en la configuración mínima me crea automáticamente las bases de datos predefinidas por defecto (information_schema, sql, performance_schema y sys), y lo único que tengo que pasarle es la password del usuario root.
+
+```console
+docker run --name some-mysql -e MYSQL_ROOT_PASSWORD=my-secret-pw -d mysql:tag
+```
+
+Esa password se la vamos a pasar como una variable de entorno (environment variable) con la opción `-e`. Si seguimos leyendo más abajo podemos ver que hay más variables de entorno disponibles como definir el usuario, el nombre de la BD, ...
+
+Para probar, nosotros vamos a tener un contenedor MySQL servidor y otro MySQL cliente y veremos que por el hecho de estar en la misma red personalizada, automáticamente vamos a poder enlazar los dos contenedores sin tener que configurar nada como tuvimos que hacer en la red bridge por defecto.
+
+Creamos el contenedor de MySQL servidor
+
+```console
+$ sudo docker run -d --name mysql_server --rm  --network red1 -e 
+MYSQL_ROOT_PASSWORD=secret mysql
+
+Unable to find image 'mysql:latest' locally
+latest: Pulling from library/mysql
+bb79b6b2107f: Pull complete 
+49e22f6fb9f7: Pull complete 
+842b1255668c: Pull complete 
+9f48d1f43000: Pull complete 
+c693f0615bce: Pull complete 
+8a621b9dbed2: Pull complete 
+0807d32aef13: Pull complete 
+a56aca0feb17: Pull complete 
+de9d45fd0f07: Pull complete 
+1d68a49161cc: Pull complete 
+d16d318b774e: Pull complete 
+49e112c55976: Pull complete 
+Digest: sha256:8c17271df53ee3b843d6e16d46cff13f22c9c04d6982eb15a9a47bd5c9ac7e2d
+Status: Downloaded newer image for mysql:latest
+2de068430fbd7650dfce4bd3b66ca6450c801a4668981d0132412b1ff3949800
+```
+
+Como vemos, no hemos publicado ningún puerto, no hemos puesto el `-p` 3306 de MySQL, porque yo no quiero acceder desde la máquina host, sino que quiero acceder desde otro contenedor.
+
+Vamos a comprobar que realmente se ha creado y está funcionando el contenedor *mysql_server*
+
+```console
+$ sudo docker ps
+
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                 NAMES
+2de068430fbd        mysql               "docker-entrypoint.s…"   6 minutes ago       Up 6 minutes        3306/tcp, 33060/tcp   mysql_server
+```
+
+Me conecto en modo interactivo al contenedor
+
+```console
+$ sudo docker exec -it mysql_server bash
+
+root@2de068430fbd:/# 
+```
+
+Voy a conectarme con MySQL
+
+```console
+root@2de068430fbd:/# mysql -u root -p
+Enter password: 
+
+Welcome to the MySQL monitor.  Commands end with ; or \g.
+Your MySQL connection id is 9
+Server version: 8.0.22 MySQL Community Server - GPL
+
+Copyright (c) 2000, 2020, Oracle and/or its affiliates. All rights reserved.
+
+Oracle is a registered trademark of Oracle Corporation and/or its
+affiliates. Other names may be trademarks of their respective
+owners.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+mysql> show databases;
++--------------------+
+| Database           |
++--------------------+
+| information_schema |
+| mysql              |
+| performance_schema |
+| sys                |
++--------------------+
+4 rows in set (0.00 sec)
+
+mysql> 
+```
+
+Veo que me puedo conectar sin problemas y al ejecutar `show databases;` me muestra las bases de datos predefinidas que tengo en cualquier MySQL.
+
+>**Nota:** Al conectarnos por consola nos estamos conectando como cliente 
+
+Ahora vamos a crear el contenedor MySQL cliente
+
+```console
+$ sudo docker run -it --rm --name mysql_client --network red1 mysql bash
+
+root@aad7ea0cad1f:/#
+```
+
+En este caso pongo -it porque voy a conectarme como cliente y bash para que entre en modo bash, porque sino va a intentar crearme la BD.
+
+Y fijarse que en la opción `--network` también le hemos dicho que utilice la red *red1* para que estén en la misma red.
+
+```console
+root@aad7ea0cad1f:/# mysql -h mysql_server -u root -p
+Enter password: 
+
+Welcome to the MySQL monitor.  Commands end with ; or \g.
+Your MySQL connection id is 11
+Server version: 8.0.22 MySQL Community Server - GPL
+
+Copyright (c) 2000, 2020, Oracle and/or its affiliates. All rights reserved.
+
+Oracle is a registered trademark of Oracle Corporation and/or its
+affiliates. Other names may be trademarks of their respective
+owners.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+mysql> show databases;
++--------------------+
+| Database           |
++--------------------+
+| information_schema |
+| mysql              |
+| performance_schema |
+| sys                |
++--------------------+
+4 rows in set (0.00 sec)
+
+mysql> 
+```
+
+La opción `-h` es para especificar el host remoto
+
+Entonces, vemos que no hemos tenido que configurar en ningún momento el nombre de la máquina, hemos utilizado directamente el `-h` con el nombre de la máquina, no he tenido que configurar el nombre de *mysql_server*, no he tenido que acceder por la dirección IP, sino que al entrar en una red personalizada, él crea un DNS de forma que todas las máquinas se ven entre sí sin tener que poner el `--link` ni otras opciones.
+
+### Ejemplo enlazar contenedores. WordPress y MySQL
+
+Vamos a hacer un ejemplo en el cual vamos a ver cómo conectarnos desde un Wordpress a un MySQL.
+
+Lo que vamos a hacer es lo siguiente:
+
+- Vamos a tener por un lado mi máquina host
+- dentro de mi máquina host voy a tener dos contenedores, el contenedor de Wordpress y el contenedor de MySQL
+- El contenedor de MySQL se va a llamar *mysql_wp* y va a contener la BD de Wordpress, porque la imagen de Wordpress por defecto utiliza MySQL
+- El contenedor de Wordpress se va a llamar *wp* y que funciona con Apache
+- Primero arranco el contenedor de MySQL
+- Luego arranco el contenedor de Wordpress, que se va a conectar y que va a crear una BD en el contenedor de MySQL llamada *wordpress*
+- Luego desde un navegador de la máquina host voy a conectarme al wp Apache y para utilizarlo le voy a decir que el cliente, que es mi máquina, va a utilizar el puerto 8080, pero dentro del contenedor, el Apache de WordPress va a utilizar el puerto 80.
+
+> **Nota:** En la versión 8 de MySQL han cambiado el tratamiento de las password y las aplicaciones que no están preparadas, no funcionan, por ejemplo Wordpress y Joomla. Por lo tanto hay que descargarse la imagen de la versión 5.7 o anterior.
+
+Entonces, vamos a crear el contenedor *mysql_wp* de MySQL
+
+```console
+$ sudo docker run -d --name mysql_wp --rm --network red1 -e MYSQL_ROOT_PASSWORD=secret mysql:5.7
+
+Unable to find image 'mysql:5.7' locally
+5.7: Pulling from library/mysql
+bb79b6b2107f: Already exists 
+49e22f6fb9f7: Already exists 
+842b1255668c: Already exists 
+9f48d1f43000: Already exists 
+c693f0615bce: Already exists 
+8a621b9dbed2: Already exists 
+0807d32aef13: Already exists 
+f15d42f48bd9: Pull complete 
+098ceecc0c8d: Pull complete 
+b6fead9737bc: Pull complete 
+351d223d3d76: Pull complete 
+Digest: sha256:4d2b34e99c14edb99cdd95ddad4d9aa7ea3f2c4405ff0c3509a29dc40bcb10ef
+Status: Downloaded newer image for mysql:5.7
+140aaa1cf84934fd041e54b8adb876339c3e69835d9cfb79d26508648b29eab1
+```
+
+Ahora creamos el de Wordpress y vamos a Docker Hub a la documentación oficial de la imagen wordpress y vemos que vamos a necesitar 2 variables de entorno, el host o máquina donde está la base de datos, el usuario no hace falta porque es root y la password que le pusimos al usuario root en MySQL.
+
+Hay que leer con cuidado los valores por defecto, ya que si no le ponemos el nombre de la máquina donde está el servidor MySQL, va buscar una que se llame *mysql*, y va a dar error porque no la va a encontrar porque la nuestra se llama *mysql_wp*. Igual ocurre con el usuario de la BD o con otras variables de entorno.
+
+```console
+$ sudo docker run -d --name wp --rm --network red1 -p 8080:80 -e WORDPRESS_DB_HOST=mysql_wp -e WORDPRESS_DB_PASSWORD=secret wordpress
+
+Unable to find image 'wordpress:latest' locally
+latest: Pulling from library/wordpress
+bb79b6b2107f: Already exists 
+80f7a64e4b25: Pull complete 
+da391f3e81f0: Pull complete 
+8199ae3052e1: Pull complete 
+284fd0f314b2: Pull complete 
+f38db365cd8a: Pull complete 
+1416a501db13: Pull complete 
+1a45b5b978cd: Pull complete 
+c662caa8d2ec: Pull complete 
+2db216a7247d: Pull complete 
+c3a7647076e8: Pull complete 
+e40fcea67f94: Pull complete 
+7f3f9920f7b8: Pull complete 
+815cf81de52a: Pull complete 
+680504ca4ff0: Pull complete 
+9ffcc5a051ce: Pull complete 
+b9db15beb1db: Pull complete 
+d5b4974eafaa: Pull complete 
+0265b92c6601: Pull complete 
+3342ef871b20: Pull complete 
+Digest: sha256:6bfe0d4bdb581493c2350da80c48fca089d39315d8fa309bdff7984442e13ba9
+Status: Downloaded newer image for wordpress:latest
+032c265b25210ba1bcc5c4240ac964b9132c9cbde42bf3c91a33cf00078008bc
+```
+
+Vamos a ver que se han creado los contenedores y que están arrancados
+
+```console
+$ sudo docker ps
+
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                  NAMES
+032c265b2521        wordpress           "docker-entrypoint.s…"   2 minutes ago       Up 2 minutes        0.0.0.0:8080->80/tcp   wp
+140aaa1cf849        mysql:5.7           "docker-entrypoint.s…"   14 minutes ago      Up 14 minutes       3306/tcp, 33060/tcp    mysql_wp
+```
+
+Y vamos a comprobar que se ha desplegado y configurado correctamente y que se ha creado la BD wordpress en el contenedor de MySQL mysql_wp
+
+```console
+$ sudo docker exec -it mysql_wp bash
+
+root@140aaa1cf849:/# mysql -u root -p
+
+Enter password: 
+Welcome to the MySQL monitor.  Commands end with ; or \g.
+Your MySQL connection id is 7
+Server version: 5.7.32 MySQL Community Server (GPL)
+
+Copyright (c) 2000, 2020, Oracle and/or its affiliates. All rights reserved.
+
+Oracle is a registered trademark of Oracle Corporation and/or its
+affiliates. Other names may be trademarks of their respective
+owners.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+mysql> show databases;
++--------------------+
+| Database           |
++--------------------+
+| information_schema |
+| mysql              |
+| performance_schema |
+| sys                |
+| wordpress          |
++--------------------+
+5 rows in set (0.00 sec)
+
+mysql> 
+```
+
+Y vemos que hay una BD llamada wordpress.
+
+Si inspeccionamos las tablas:
+
+```
+mysql> use wordpress;
+Database changed
+
+mysql> show tables;
+Empty set (0.00 sec)
+```
+
+No hay ninguna tabla aún porque se van a crear al configura Wordpress desde el navegador.
+
+Entonces, vamos al navegador y ponemos:
+
+localhost:8080
+
+Y vemos cómo se inicia la instalación de WP.
+
+Entonces, con dos contenedores, uno de MySQL y otro de Wordpress, de una manera muy sencilla, utilizando una red personalizada, de forma que no he tenido que configurar ni nombres ni nada porque docker ha creado todo lo necesario.
+
+Si hubiesemos tenido que utilizar la red bridge por defecto, sí que tendríamos que hacer una configuración adicional y utilizar la opción --link.
+
+**Ejercicio Práctico:**
+> Práctica 11 - Enlazar contenedores con redes personalizadas.pdf
