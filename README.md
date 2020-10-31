@@ -39,6 +39,8 @@
   - [3.8 Enlazar contenedores en redes personalizadas](#38-enlazar-contenedores-en-redes-personalizadas)
     - [Ejemplo enlazar contenedores. WordPress y MySQL](#Ejemplo-enlazar-contenedores-WordPress-y-MySQL)
   - [3.9 Borrar una red](#39-Borrar-una-red)
+- [SECCIÓN 4: Volúmenes](#SECCIÓN-4-Volúmenes)
+  - [4.1 Conceptos de volúmenes](#41-Conceptos-de-volúmenes)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -3897,3 +3899,7 @@ f82c4fc40f9e        red2                bridge              local
 ```
 
 Vemos que se ha eliminado la rede *red1*, ya no aparece.
+
+# SECCIÓN 4: Volúmenes
+
+## 4.1 Conceptos de volúmenes
