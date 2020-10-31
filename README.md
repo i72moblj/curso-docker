@@ -38,6 +38,7 @@
     - [Enlazar contenedores con la red bridge por defecto](#enlazar-contenedores-con-la-red-bridge-por-defecto)
   - [3.8 Enlazar contenedores en redes personalizadas](#38-enlazar-contenedores-en-redes-personalizadas)
     - [Ejemplo enlazar contenedores. WordPress y MySQL](#Ejemplo-enlazar-contenedores-WordPress-y-MySQL)
+  - [3.9 Borrar una red](#39-Borrar-una-red)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -3507,8 +3508,7 @@ Para probar, nosotros vamos a tener un contenedor MySQL servidor y otro MySQL cl
 Creamos el contenedor de MySQL servidor
 
 ```console
-$ sudo docker run -d --name mysql_server --rm  --network red1 -e 
-MYSQL_ROOT_PASSWORD=secret mysql
+$ sudo docker run -d --name mysql_server --rm  --network red1 -e MYSQL_ROOT_PASSWORD=secret mysql
 
 Unable to find image 'mysql:latest' locally
 latest: Pulling from library/mysql
@@ -3774,3 +3774,126 @@ Si hubiesemos tenido que utilizar la red bridge por defecto, sí que tendríamos
 
 **Ejercicio Práctico:**
 > Práctica 11 - Enlazar contenedores con redes personalizadas.pdf
+
+## 3.9 Borrar una red
+
+Primero vamos a ver las redes que tenemos
+
+```console
+$ sudo docker network ls
+
+NETWORK ID          NAME                DRIVER              SCOPE
+3511fae02db2        bridge              bridge              local
+37250215cc83        host                host                local
+2006762eef86        none                null                local
+4dd04c1b445f        red1                bridge              local
+f82c4fc40f9e        red2                bridge              local
+```
+
+Vamso a borrar la red *red1*
+
+```console
+$ sudo docker network rm red1
+
+Error response from daemon: error while removing network: network red1 id 4dd04c1b445f9f5f0b2b6a9302c9992ca7ecadf20a002f2cedd8bf62449c05ea has active endpoints
+```
+
+Me da error porque todavía se están ejecutanto los contenedores que hemos creado antes y que están enlazados con la *red1*.
+
+```console
+sudo docker ps
+
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                  NAMES
+dc87e29e8be7        wordpress           "docker-entrypoint.s…"   3 minutes ago       Up 3 minutes        0.0.0.0:8080->80/tcp   wp
+152830177e51        mysql:5.7           "docker-entrypoint.s…"   4 minutes ago       Up 4 minutes        3306/tcp, 33060/tcp    mysql_wp
+```
+
+Y si inspeccionamos la red *red1*
+
+```console
+$ sudo docker network inspect red1
+
+[
+    {
+        "Name": "red1",
+        "Id": "4dd04c1b445f9f5f0b2b6a9302c9992ca7ecadf20a002f2cedd8bf62449c05ea",
+        "Created": "2020-10-12T10:50:18.842945166+02:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": {},
+            "Config": [
+                {
+                    "Subnet": "172.18.0.0/16",
+                    "Gateway": "172.18.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {
+            "152830177e5102e2249b34259fe1f369fefb8609f6939a9476d2304da8cfc632": {
+                "Name": "mysql_wp",
+                "EndpointID": "15adbf1fcc4359399bfcec6c1b4516269439b1dd53d07294ae059fc5706b9be2",
+                "MacAddress": "02:42:ac:12:00:03",
+                "IPv4Address": "172.18.0.3/16",
+                "IPv6Address": ""
+            },
+            "dc87e29e8be7e577af745ad3f7fb841dd18c8d921cbcb334ca5b8eb24162bf51": {
+                "Name": "wp",
+                "EndpointID": "34f10354dd4930b2530a5c9b78810dfc9fef5815a8dfeb51e9f0851ad58744b3",
+                "MacAddress": "02:42:ac:12:00:04",
+                "IPv4Address": "172.18.0.4/16",
+                "IPv6Address": ""
+            }
+        },
+        "Options": {},
+        "Labels": {}
+    }
+]
+
+```
+
+Podemos comprobar que sigo teniendo los dos contenedores asociados y por lo tanto no me va a dejar eliminar la red.
+
+Para borrarla, primero tengo que parar los contenedores que tiene enlazados
+
+```console
+$ sudo docker stop mysql_wp
+
+mysql_wp
+
+$ sudo docker stop wp
+
+wp
+```
+
+Entonces si intentamos borrarla de nuevo, ya me va a dejar
+
+```console
+$ sudo docker network rm red1
+
+red1
+```
+
+Vamos a comprobarlo
+
+```console
+$ sudo docker network ls
+
+NETWORK ID          NAME                DRIVER              SCOPE
+3511fae02db2        bridge              bridge              local
+37250215cc83        host                host                local
+2006762eef86        none                null                local
+4dd04c1b445f        red1                bridge              local
+f82c4fc40f9e        red2                bridge              local
+```
+
+Vemos que se ha eliminado la rede *red1*, ya no aparece.
