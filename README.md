@@ -42,6 +42,7 @@
 - [SECCIÓN 4: Volúmenes](#SECCIÓN-4-Volúmenes)
   - [4.1 Conceptos de volúmenes](#41-Conceptos-de-volúmenes)
   - [4.2 Crear un volumen en un contenedor](#42-Crear-un-volumen-en-un-contenedor)
+  - [4.3 Visualizar información de volúmenes](#43-Visualizar-información-de-volúmenes)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -4036,7 +4037,6 @@ dr-xr-xr-x  13 root root    0 Oct 31 19:06 sys
 drwxrwxrwt   2 root root 4096 Sep 25 01:23 tmp
 drwxr-xr-x   1 root root 4096 Sep 25 01:20 usr
 drwxr-xr-x   1 root root 4096 Sep 25 01:23 var
-
 ```
 
 Puedo comprobar que tengo un directorio llamado `/datos` que se corresponde con el nombre que yo le he dado al volumen al crear el contenedor con la opción `-v`.
@@ -4116,3 +4116,122 @@ Lo interesante de los volúmenes es que si yo hago un `exit` del contenedor, veo
 Si vuelvo a arrancarlo con `$ sudo docker start -i ubuntu1` vemos que vuelve a estar el directorio /datos y dentro sigue estando el contenido.
 
 Entonces cuando yo creo un contenedor con un volumen, ese volumen es persistente a lo largo del tiempo, hasta que evidentemente cuando no exista el contenedor y no le apunte, ese volumen se queda inválido. Ya lo veremos más adelante.
+
+## 4.3 Visualizar información de volúmenes
+
+Hay un comando específico para volúmenes, que es `docker volume` y que nos permite gestionar volúmenes
+
+```console
+$ sudo docker volume
+
+Usage:	docker volume COMMAND
+
+Manage volumes
+
+Commands:
+  create      Create a volume
+  inspect     Display detailed information on one or more volumes
+  ls          List volumes
+  prune       Remove all unused local volumes
+  rm          Remove one or more volumes
+
+Run 'docker volume COMMAND --help' for more information on a command.
+```
+
+Y como vemos, a su vez tiene otros comandos específicos gestionar volúmenes.
+
+```console
+$ sudo docker volume ls
+
+DRIVER              VOLUME NAME
+local               3d5149e4e0da6e8796f1b8e9ab59d132bdd9e61bc1eacd3c254fe2188b1f2aba
+local               5aaf706b819053e9c814ab96e61ff1f08c086b2f4e4a9e6736bdca5d8945de0e
+local               6dcb70d3e3e102c0da695117284045c24217903f93cdef02a1dc68da1fd3e3b5
+local               67bcc0db41d872464987c97d500705165e6b42a868b015f549b628b953f0b005
+local               383d0829399e2e84b7ead519fea1ed2c698e43ddbf595c2bc8a032d10643365b
+local               755b1ccd999f6e89d0c676a2ab478c03130b039a6a2068a31308f163ae761db7
+local               925d5fcb346b33a26af56da0e26c4f388226db89debc127b72db1622dd48b41d
+local               7500e69fee9079054002ddbd04b5cc48cce0c9663f27f556c0407368dd527ddc
+local               84462a4c567e2eb052f975b66ad5a3b9b0d1e53ddf539fd0d9dec01ab2c37343
+local               a83dc1dbb05316b633fc96a5eacb8c9d40b3a4b73da9c1afae0b259b5d2959d6
+local               ac9cc64efd9e52ef46dc7e488f47c9fce054e233e5f9cb511fa2fffb338f530a
+local               bd35098b083b77d673025e21d0bb3100b83e7a6017dbfd28b25546176c871488
+local               ce55bfdde6f702cfb3ec5c33e55655d0b6be7df6e0c881887ee6aa84f84801dc
+local               d792aabd9549a800b28ce03e5ea4ab62f423bc67372a3b438963b03652dad694
+local               da931c49d6f0b998cb212930f4fb848abe2e8f38ba5b09dc3f5e872bc9cf97f9
+local               e369027d36b232888596dbb8966efc2cf8de46db3bd0737a704c7c093eb95847
+local               f612229b5f00beccae63f0a99324a01a990def3eb381b7bc89681bd9d4698381
+```
+
+Más adelante veremos que le podemos dar un nombre a los volúmenes en vez del hash que le asigna por defecto.
+
+También podemos inspeccionar un volumen
+
+```console
+$ sudo docker volume inspect 755b1ccd999f6e89d0c676a2ab478c03130b039a6a2068a31308f163ae761db7
+
+[
+    {
+        "CreatedAt": "2020-10-31T20:29:47+01:00",
+        "Driver": "local",
+        "Labels": null,
+        "Mountpoint": "/var/lib/docker/volumes/755b1ccd999f6e89d0c676a2ab478c03130b039a6a2068a31308f163ae761db7/_data",
+        "Name": "755b1ccd999f6e89d0c676a2ab478c03130b039a6a2068a31308f163ae761db7",
+        "Options": null,
+        "Scope": "local"
+    }
+]
+```
+
+Nos va a dar toda información sobre el volumen, en formato de fichero json, com por ejemplo cuándo se creó, el driver, punto de montaje, ...
+
+Si inspeccionamos un contenedor, podemos ver si tiene asociado un volumen y qué volumen es.
+
+```console
+$sudo docker inspect ubuntu1
+
+        "Mounts": [
+            {
+                "Type": "volume",
+                "Name": "755b1ccd999f6e89d0c676a2ab478c03130b039a6a2068a31308f163ae761db7",
+                "Source": "/var/lib/docker/volumes/755b1ccd999f6e89d0c676a2ab478c03130b039a6a2068a31308f163ae761db7/_data",
+                "Destination": "/datos",
+                "Driver": "local",
+                "Mode": "",
+                "RW": true,
+                "Propagation": ""
+            }
+        ],
+```
+
+Para borrar todos los volúmenes que están sin usar
+
+```console
+$ sudo docker volume prune
+
+WARNING! This will remove all local volumes not used by at least one container.
+Are you sure you want to continue? [y/N] y	
+Deleted Volumes:
+f612229b5f00beccae63f0a99324a01a990def3eb381b7bc89681bd9d4698381
+6dcb70d3e3e102c0da695117284045c24217903f93cdef02a1dc68da1fd3e3b5
+84462a4c567e2eb052f975b66ad5a3b9b0d1e53ddf539fd0d9dec01ab2c37343
+d792aabd9549a800b28ce03e5ea4ab62f423bc67372a3b438963b03652dad694
+5aaf706b819053e9c814ab96e61ff1f08c086b2f4e4a9e6736bdca5d8945de0e
+925d5fcb346b33a26af56da0e26c4f388226db89debc127b72db1622dd48b41d
+bd35098b083b77d673025e21d0bb3100b83e7a6017dbfd28b25546176c871488
+e369027d36b232888596dbb8966efc2cf8de46db3bd0737a704c7c093eb95847
+383d0829399e2e84b7ead519fea1ed2c698e43ddbf595c2bc8a032d10643365b
+67bcc0db41d872464987c97d500705165e6b42a868b015f549b628b953f0b005
+7500e69fee9079054002ddbd04b5cc48cce0c9663f27f556c0407368dd527ddc
+da931c49d6f0b998cb212930f4fb848abe2e8f38ba5b09dc3f5e872bc9cf97f9
+3d5149e4e0da6e8796f1b8e9ab59d132bdd9e61bc1eacd3c254fe2188b1f2aba
+ac9cc64efd9e52ef46dc7e488f47c9fce054e233e5f9cb511fa2fffb338f530a
+ce55bfdde6f702cfb3ec5c33e55655d0b6be7df6e0c881887ee6aa84f84801dc
+
+Total reclaimed space: 1.7GB
+```
+
+Cuando se elimina un contenedor que tiene un volumen asociado, el volumen no se elimina, se queda inválido
+
+**Ejercicio Práctico:**
+> Práctica 12 - Crear un volúmen en un contenedor.pdf
