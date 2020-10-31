@@ -41,6 +41,7 @@
   - [3.9 Borrar una red](#39-Borrar-una-red)
 - [SECCIÓN 4: Volúmenes](#SECCIÓN-4-Volúmenes)
   - [4.1 Conceptos de volúmenes](#41-Conceptos-de-volúmenes)
+  - [4.2 Crear un volumen en un contenedor](#42-Crear-un-volumen-en-un-contenedor)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -3903,3 +3904,215 @@ Vemos que se ha eliminado la rede *red1*, ya no aparece.
 # SECCIÓN 4: Volúmenes
 
 ## 4.1 Conceptos de volúmenes
+
+Los volúmenes es un componente muy importante de la arquitectura de Docker.
+
+Los volúmenes son el mecanismo que se utiliza dentro de docker para persistir la información.
+
+Hasta ahora, cuando hemos trabajado con contenedores, los contenedores se ejecutaban, se paraban, se volvían a lanzar, ... pero realmente, si yo dejo la información dentro del contenedor, esa información no es fácil de trasladar a otros contenedores o incluso al host.
+
+Entonces, dentro de los volúmenes yo puedo compartir recursos, compartir datos tanto entre los distintos contenedores como con el host.
+
+Una ventaja de los volúmenes es que los administra completamente Docker y no el sistema operativo, por lo que:
+
+- son más fáciles de migrar, 
+- de hacer backups, 
+- se administran directamente con comandos de docker, 
+- funcionan tanto en Linux como en Windows, 
+- se pueden compartir entre distintos contenedores, 
+- se puede almacenar un volumen en un sitio remoto, como una NAS o en una unidad NFS para poder compartirlo entre distintos elementos
+- los contenidos de un volumen pueden ser previamente rellenados por un contenedor para que puedan ser utilizados por otro.
+
+La mecánica es bastante sencilla. 
+
+Los volúmenes parten de que yo tengo un contenedor y dentro tengo el File System del contenedor, es decir, el que se crea por ejemplo si yo creo un contenedor de una imagen de Ubuntu, pues yo tendré hay el / con su /tmp, /var, /var/log, ...pero yo puedo crear un directorio llamado /datos y que en vez de tener la información, los datos, el almacenamiento, dentro del contenedor, lo tenga en un volumen separado de tal forma que cuando yo realmente esté accediendo a /datos, estoy accediendo en realidad a una información, a unos datos que están fuera, que ya veremos que realmente están en un directorio, pero que puede ser gestionado de manera externa.
+
+Y además los volúmenes pueden:
+
+- Usarse para almacenar de forma persistente información de ese contenedor de forma que cuando vuelva a arrancar los datos estén ahí sin problemas,
+- Puedo compartir esos datos entre el host y el contenedor
+- Puedo compartir el almacenamiento entre distintos contenedores
+
+## 4.2 Crear un volumen en un contenedor
+
+Vamos a crear un volumen de manera interactiva, de manera dinámica, cuando creamos un contenedor, es decir, la forma más básica de crear un volumen es decírselo cuando creo un contenedor, hay una opción que es `-v` y que permite crear un contenedor con un volúmen.
+
+Antes que nada vamos a ver una parte de administración pura de Docker
+
+Nos vamos a ir al directorio `/var/lib/docker` y listamos el contenido
+
+```console
+$ cd /var/lib/docker
+
+# ls -l
+
+total 64
+drwx------   2 root root  4096 oct 10 20:10 builder
+drwx--x--x   4 root root  4096 oct 10 20:10 buildkit
+drwx------   4 root root  4096 oct 31 19:24 containers
+drwx------   3 root root  4096 oct 10 20:10 image
+drwxr-x---   3 root root  4096 oct 10 20:10 network
+drwx------ 118 root root 20480 oct 31 19:24 overlay2
+drwx------   4 root root  4096 oct 10 20:10 plugins
+drwx------   2 root root  4096 oct 31 19:03 runtimes
+drwx------   2 root root  4096 oct 10 20:10 swarm
+drwx------   2 root root  4096 oct 31 19:15 tmp
+drwx------   2 root root  4096 oct 10 20:10 trust
+drwx------  18 root root  4096 oct 31 19:24 volumes
+```
+
+Vemos que tengo una serie de directorios donde va a almacenar la información que se va generando al trabajar con Docker: los containers, las imagenes, las redes, ... 
+
+Este directorio no se debe de tocar, a no ser que sepamos muy bien lo que estamos haciendo, porque este directorio con todos sus subdirectorios se gestiona o se mantiene de manera automática por parte de Docker. De hecho si accedemos a cualquier directorio vemos que el contenido no es muy *visible*, por lo que no se suele tocar a mano ese directorio, sino que se hace a través de Docker.
+
+Entonces vamos a ir directorio volumes, para poder comprobar que según vayamos creando volúmenes, van a ir apareciendo ahí, en `/var/lib/docker/volumes`.
+
+```console
+# cd volumes
+
+# pwd
+
+/var/lib/docker/volumes
+
+# ls -l
+
+total 96
+drwxr-xr-x 3 root root  4096 oct 12 18:24 383d0829399e2e84b7ead519fea1ed2c698e43ddbf595c2bc8a032d10643365b
+drwxr-xr-x 3 root root  4096 oct 11 20:03 3d5149e4e0da6e8796f1b8e9ab59d132bdd9e61bc1eacd3c254fe2188b1f2aba
+drwxr-xr-x 3 root root  4096 oct 12 18:33 5aaf706b819053e9c814ab96e61ff1f08c086b2f4e4a9e6736bdca5d8945de0e
+drwxr-xr-x 3 root root  4096 oct 11 20:33 67bcc0db41d872464987c97d500705165e6b42a868b015f549b628b953f0b005
+drwxr-xr-x 3 root root  4096 oct 12 18:20 6dcb70d3e3e102c0da695117284045c24217903f93cdef02a1dc68da1fd3e3b5
+drwxr-xr-x 3 root root  4096 oct 12 18:29 7500e69fee9079054002ddbd04b5cc48cce0c9663f27f556c0407368dd527ddc
+drwxr-xr-x 3 root root  4096 oct 12 18:33 84462a4c567e2eb052f975b66ad5a3b9b0d1e53ddf539fd0d9dec01ab2c37343
+drwxr-xr-x 3 root root  4096 oct 12 18:24 925d5fcb346b33a26af56da0e26c4f388226db89debc127b72db1622dd48b41d
+drwxr-xr-x 3 root root  4096 oct 12 20:41 a83dc1dbb05316b633fc96a5eacb8c9d40b3a4b73da9c1afae0b259b5d2959d6
+drwxr-xr-x 3 root root  4096 oct 12 18:23 ac9cc64efd9e52ef46dc7e488f47c9fce054e233e5f9cb511fa2fffb338f530a
+drwxr-xr-x 3 root root  4096 oct 11 20:13 bd35098b083b77d673025e21d0bb3100b83e7a6017dbfd28b25546176c871488
+drwxr-xr-x 3 root root  4096 oct 12 18:23 ce55bfdde6f702cfb3ec5c33e55655d0b6be7df6e0c881887ee6aa84f84801dc
+drwxr-xr-x 3 root root  4096 oct 11 20:03 d792aabd9549a800b28ce03e5ea4ab62f423bc67372a3b438963b03652dad694
+drwxr-xr-x 3 root root  4096 oct 12 18:20 da931c49d6f0b998cb212930f4fb848abe2e8f38ba5b09dc3f5e872bc9cf97f9
+drwxr-xr-x 3 root root  4096 oct 12 18:29 e369027d36b232888596dbb8966efc2cf8de46db3bd0737a704c7c093eb95847
+drwxr-xr-x 3 root root  4096 oct 11 20:13 f612229b5f00beccae63f0a99324a01a990def3eb381b7bc89681bd9d4698381
+-rw------- 1 root root 65536 oct 31 19:24 metadata.db
+```
+
+Como hemos dicho, esa información no es muy visible, pero sí vamos a poder comprobar si se ha creado un nuevo volumen.
+
+Entonces vamos a crear un contenedor con un volumen, y vamos a probar con un Ubuntu.
+
+```console
+$ sudo docker run -it --name ubuntu1 -v /datos ubuntu bash
+
+root@538b1987fad7:/# 
+```
+
+Con `-v` lo que hace es que dentro del contenedor va a crear un directorio llamado /datos que va a crear automáticamente un volumen, un volúmen que como hemos visto antes, es un almacenamiento persistente que está fuera del contenedor y que por defecto lo guarda en `/var/lib/docker/volumes`, a no ser que se especifique la ruta. Entonces cada vez que yo cree un volumen en un contenedor, el espacio de almacenamiento lo va a poner en esa ruta y dentro de `volumes` va a tener el nombre del ID del volumen.
+
+Como el contenedor es interactivo y le he puesto que ejecute bash al arrancar, si listo los directorios del raíz
+
+```console
+root@538b1987fad7:/# ls -l
+
+total 52
+lrwxrwxrwx   1 root root    7 Sep 25 01:20 bin -> usr/bin
+drwxr-xr-x   2 root root 4096 Apr 15  2020 boot
+drwxr-xr-x   2 root root 4096 Oct 31 19:06 datos
+drwxr-xr-x   5 root root  360 Oct 31 19:06 dev
+drwxr-xr-x   1 root root 4096 Oct 31 19:06 etc
+drwxr-xr-x   2 root root 4096 Apr 15  2020 home
+lrwxrwxrwx   1 root root    7 Sep 25 01:20 lib -> usr/lib
+lrwxrwxrwx   1 root root    9 Sep 25 01:20 lib32 -> usr/lib32
+lrwxrwxrwx   1 root root    9 Sep 25 01:20 lib64 -> usr/lib64
+lrwxrwxrwx   1 root root   10 Sep 25 01:20 libx32 -> usr/libx32
+drwxr-xr-x   2 root root 4096 Sep 25 01:20 media
+drwxr-xr-x   2 root root 4096 Sep 25 01:20 mnt
+drwxr-xr-x   2 root root 4096 Sep 25 01:20 opt
+dr-xr-xr-x 313 root root    0 Oct 31 19:06 proc
+drwx------   2 root root 4096 Sep 25 01:23 root
+drwxr-xr-x   1 root root 4096 Sep 25 22:34 run
+lrwxrwxrwx   1 root root    8 Sep 25 01:20 sbin -> usr/sbin
+drwxr-xr-x   2 root root 4096 Sep 25 01:20 srv
+dr-xr-xr-x  13 root root    0 Oct 31 19:06 sys
+drwxrwxrwt   2 root root 4096 Sep 25 01:23 tmp
+drwxr-xr-x   1 root root 4096 Sep 25 01:20 usr
+drwxr-xr-x   1 root root 4096 Sep 25 01:23 var
+
+```
+
+Puedo comprobar que tengo un directorio llamado `/datos` que se corresponde con el nombre que yo le he dado al volumen al crear el contenedor con la opción `-v`.
+
+Y si nos vamos a `/var/lib/docker/volumes` podemos ver que me acaba de crear otro volúmen, y vemos que es bastante inmanejable el número hash que le asigna, pero ya veremos más adelante cómo crear volúmenes con nombres, compartir en otros directorios, ...
+
+```console
+# ls -l
+
+total 100
+drwxr-xr-x 3 root root  4096 oct 12 18:24 383d0829399e2e84b7ead519fea1ed2c698e43ddbf595c2bc8a032d10643365b
+drwxr-xr-x 3 root root  4096 oct 11 20:03 3d5149e4e0da6e8796f1b8e9ab59d132bdd9e61bc1eacd3c254fe2188b1f2aba
+drwxr-xr-x 3 root root  4096 oct 12 18:33 5aaf706b819053e9c814ab96e61ff1f08c086b2f4e4a9e6736bdca5d8945de0e
+drwxr-xr-x 3 root root  4096 oct 11 20:33 67bcc0db41d872464987c97d500705165e6b42a868b015f549b628b953f0b005
+drwxr-xr-x 3 root root  4096 oct 12 18:20 6dcb70d3e3e102c0da695117284045c24217903f93cdef02a1dc68da1fd3e3b5
+drwxr-xr-x 3 root root  4096 oct 12 18:29 7500e69fee9079054002ddbd04b5cc48cce0c9663f27f556c0407368dd527ddc
+drwxr-xr-x 3 root root  4096 oct 31 20:06 755b1ccd999f6e89d0c676a2ab478c03130b039a6a2068a31308f163ae761db7
+drwxr-xr-x 3 root root  4096 oct 12 18:33 84462a4c567e2eb052f975b66ad5a3b9b0d1e53ddf539fd0d9dec01ab2c37343
+drwxr-xr-x 3 root root  4096 oct 12 18:24 925d5fcb346b33a26af56da0e26c4f388226db89debc127b72db1622dd48b41d
+drwxr-xr-x 3 root root  4096 oct 12 20:41 a83dc1dbb05316b633fc96a5eacb8c9d40b3a4b73da9c1afae0b259b5d2959d6
+drwxr-xr-x 3 root root  4096 oct 12 18:23 ac9cc64efd9e52ef46dc7e488f47c9fce054e233e5f9cb511fa2fffb338f530a
+drwxr-xr-x 3 root root  4096 oct 11 20:13 bd35098b083b77d673025e21d0bb3100b83e7a6017dbfd28b25546176c871488
+drwxr-xr-x 3 root root  4096 oct 12 18:23 ce55bfdde6f702cfb3ec5c33e55655d0b6be7df6e0c881887ee6aa84f84801dc
+drwxr-xr-x 3 root root  4096 oct 11 20:03 d792aabd9549a800b28ce03e5ea4ab62f423bc67372a3b438963b03652dad694
+drwxr-xr-x 3 root root  4096 oct 12 18:20 da931c49d6f0b998cb212930f4fb848abe2e8f38ba5b09dc3f5e872bc9cf97f9
+drwxr-xr-x 3 root root  4096 oct 12 18:29 e369027d36b232888596dbb8966efc2cf8de46db3bd0737a704c7c093eb95847
+drwxr-xr-x 3 root root  4096 oct 11 20:13 f612229b5f00beccae63f0a99324a01a990def3eb381b7bc89681bd9d4698381
+-rw------- 1 root root 65536 oct 31 20:06 metadata.db
+```
+
+Vemos que ha creado el volumen *755b1ccd999f6e89d0c676a2ab478c03130b039a6a2068a31308f163ae761db7*
+
+Si entramos dentro del volumen, vemos que hay otro directorio llamado `_data` y que por defecto el directorio está vacío.
+
+```console
+# pwd
+
+/var/lib/docker/volumes/755b1ccd999f6e89d0c676a2ab478c03130b039a6a2068a31308f163ae761db7/_data
+
+# ls -l
+
+total 0
+```
+
+Y fijarse que si dentro del contenedor voy al directorio `/datos` creo un fichero, por ejemplo con touch, y me voy al volumen de la máquina host `/var/lib/docker/volumes/755b1ccd999f6e89d0c676a2ab478c03130b039a6a2068a31308f163ae761db7/_data`, vemos que ahí está.
+
+```console
+root@538b1987fad7:/# cd datos/
+
+root@538b1987fad7:/datos# ls -l
+
+total 0
+
+root@538b1987fad7:/datos# touch fichero.txt
+
+root@538b1987fad7:/datos# ls
+
+total 0
+-rw-r--r-- 1 root root 0 Oct 31 19:29 fichero.txt
+```
+
+```console
+root@debian:/var/lib/docker/volumes/755b1ccd999f6e89d0c676a2ab478c03130b039a6a2068a31308f163ae761db7/_data# ls -l
+
+total 0
+-rw-r--r-- 1 root root 0 oct 31 20:29 fichero.txt
+```
+
+Entonces ahora se entiende mejor lo de la persistencia y la compartición de la información entre contenedores y la máquina host, de forma que todo lo que yo voy haciendo en el directorio `/datos` del contenedor se va a guardar en un directorio de la máquina host, de la máquina física.
+
+Y al contrario también funciona, es decir, si yo creo un archivo en `/var/lib/docker/volumes/{hash}/_data/` se va a reflejar en el directorio `/datos` del contenedor.
+
+Entonces, la creación de un volumen es muy automática, con el inconveniente de que si sólo le pongo el `-v`, me va a crear el volumen en ese directorio y con ese nombre que es un hash.
+
+Lo interesante de los volúmenes es que si yo hago un `exit` del contenedor, veo que el contenido del volumen sigue estando en la máquina host, aunque el contenedor esté parado.
+
+Si vuelvo a arrancarlo con `$ sudo docker start -i ubuntu1` vemos que vuelve a estar el directorio /datos y dentro sigue estando el contenido.
+
+Entonces cuando yo creo un contenedor con un volumen, ese volumen es persistente a lo largo del tiempo, hasta que evidentemente cuando no exista el contenedor y no le apunte, ese volumen se queda inválido. Ya lo veremos más adelante.
