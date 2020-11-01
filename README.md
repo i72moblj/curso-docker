@@ -4647,55 +4647,13 @@ En mi caso borra el volumen `vol1` pero el espacio liberado es 0 porque estaba v
 
 Una imagen no es más que una serie de capas de tipo *read-only*, que se agregando unas encima de otras hasta formar una determinada imagen.
 
-Vamos a ver las distintas capas que forman una imagen, desde la más básica hasta la superior que sería el contenedor. Y cada capa hace referencia a la imagen padre (capa inferior)
-
 ![Capas de una imagen de Docker](img/capas-imagen-docker.png)
 
-Lo primero que tendríamos sería un sistema de ficheros de arranque
+Vamos a ver las distintas capas que forman una imagen, desde la más básica hasta la superior que sería el contenedor. Y cada capa hace referencia a la imagen padre (capa inferior)
 
+- El sistema de ficheros de arranque, *bootfs*, que es de sólo lectura y que está asociado al kernel de la máquina host en la que estamos, ya sea un Linux o un Windows.
+- El sistema de ficheros raíz, *rootfs*, que es de sólo lectura y que está asociado al sistema operativo de la imagen base, por ejemplo: Ubuntu, Fedora, ...
+- Las n capas de imagen, que son de sólo lectura y son las capas que vamos añadiendo para formar la imagen, por ejemplo: Apache, MariaDB, ...
+- El contenedor, que es el único de tipo lectura y escritura. Cada contenedor es la suma de todas las capas de una determinada imagen, pero evidentemente, sólo la parte superior, la parte del contenedor es modificable.
 
-
-
-
-
-
-
-
-
-
-
-         CAPAS
-
-*-------------------------+--------------------+
-|      Container          | Lectura /escritura |   ^
-+-------------------------+--------------------+  /^\ 
-|        Image n          |    Sólo lectura    |   |    Cada capa
-+-------------------------+--------------------+   |    referencia
-|          ...            |    Sólo lectura    |   |    a su capa padre
-+-------------------------+--------------------+   |    (la inferior)
-|        Image 1          |    Sólo lectura    |   |
-+-------------------------+--------------------+   |
-|   Base Image (rootfs)   |    Sólo lectura    |   |
-+-------------------------+--------------------+   |
-|     Kernel (bootfs)     |    Sólo lectura    |
-+-------------------------+--------------------+
-
-Entonces, desde abajo hacia arriba:
-
-- Monta el sistema de ficheros de arranque: bootfs (lectura).
-     Asociado a la máquina en la que estamos, un Linux o un Windows.
-- Monta el sistema de ficheros de root: rootfs (lectura)
-     El sistema operativo de la Imagen base, por ejemplo: Ubuntu, Fedora, ...
-- Monta las n capas de imagen (lectura)
-     Capas que vamos añadiendo a la imagen, por ejemplo Apache, MariaDB, ...
-- Monta una capa por encima (lecutra/escritura) -> el contendor
-     El contenedor es la suma de todas las capas de una determinada imagen, pero sólo ese contenedor es modificable
-
-Veremos más adelante cómo podemos modificar un contenedor para poder crear una imagen a partir de él.
-
-[Inicio](#curso-de-docker)
-
-| Comando | Comando equivalente |
-| --- | --- |
-| `docker images` | `docker image ls` |
-| `docker rmi <image>` | `docker image rm <image>` |
+En los siguientes capítulos veremos cómo podemos modificar este contenedor para luego crear una imagen a partir de él.
