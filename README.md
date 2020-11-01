@@ -4239,3 +4239,77 @@ Cuando se elimina un contenedor que tiene un volumen asociado, el volumen no se 
 
 ## 4.4 Crear un directorio compartido con el host
 
+Vamos a ver cómo compartir un directorio entre la máquina host y el contenedor, pero no como hemos visto hasta ahora, que lo dejaba en la carpeta `/var/lib/docker/volumes/{idContenedor}/_data/`, un directorio que no es fácil ni cómodo trabajar con él.
+
+Entonces lo que vamos a hacer es que al crear el contenedor, le vamos a indicar que vamos a compartir un directorio concreto del host con un directorio concreto del contenedor.
+
+Vamos a hacer un ejemplo en el que voy a crear un directorio llamado dir1 en la carpeta /home/usuario/dir1 de la máquina host y voy a hacer que corresponda con el directorio /dir1 del contenedor.
+
+```console
+$ mkdir /home/jesus/dir1
+
+$ sudo docker run -it -v /home/jesus/dir1:/dir1 --name ubuntu2 ubuntu
+
+root@78296f9759f5:/# 
+```
+
+En este caso, lo que le indicamos con la opción `-v` es que comparta el directorio /home/jesus/dir1 de la máquina host con el directorio /dir1 del contenedor.
+
+Todo lo que aparezca en el directorio /home/jesus/dir1 de la máquina host se va a ver también en el directorio /dir1 del contenedor y viceversa.
+
+Si no existe alguno de los directorios que se indican en la opción `-v`, tanto en la máquina host como en el contenedor, los crea automáticamente.
+
+Y podemos hacer las pruebas que hemos hecho anteriormente para comprobar que al crear algún archivo de ejemplo en la máquina host en el directorio /home/usuario/dir1 lo tendríamos en el directorio /dir1 del contenedor y viceversa.
+
+En realidad, al usar esta opción para compartir un directorio de la máquina principal con el contenedor, el uso de la palabra volumen no es muy correcto, porque si vamos a /var/lib/docker/volumes vemos que no hay nada nuevo, porque el directorio está en otra ruta. Lo que hace realmente por debajo es asociar el directorio correspondiente de la máquina host a un directorio del contenedor. Más que un volúmen, sería un montaje, pero a todos los efectos podríamos considerarlo como un volúmen.
+
+```console
+# cd /var/lib/docker/volumes/
+
+# ls -l
+total 44
+drwxr-xr-x 3 root root  4096 oct 31 20:06 755b1ccd999f6e89d0c676a2ab478c03130b039a6a2068a31308f163ae761db7
+drwxr-xr-x 3 root root  4096 oct 31 21:03 9a62fc261cb2efed3aa34fc6051d415731fc07588e81ea8f3320d610de77add3
+drwxr-xr-x 3 root root  4096 oct 12 20:41 a83dc1dbb05316b633fc96a5eacb8c9d40b3a4b73da9c1afae0b259b5d2959d6
+-rw------- 1 root root 65536 nov  1 10:44 metadata.db
+```
+
+Fijarse que cuando se creaba un volumen, el nuevo volumen y el `metadata.db` tenían la misma fecha de creación, sin embargo, de esta forma sólo se ha actualizado el archivo `metadata.db`.
+
+
+
+
+
+
+De hecho si inspeccionamos el contenedor y vamos al apartado del montaje:
+
+```console
+$ sudo docker inspect ubuntu2
+
+    ...
+    "HostConfig": {
+        "Binds": [
+            "/home/jesus/dir1:/dir1"
+        ],
+    ...
+
+    ...
+	"Mounts": [
+        {
+            "Type": "bind",
+            "Source": "/home/jesus/dir1",
+            "Destination": "/dir1",
+            "Mode": "",
+            "RW": true,
+            "Propagation": "rprivate"
+        }
+    ],
+    ...
+
+```
+
+Podemos ver que es de tipo "bind" en vez de tipo "volume". 
+
+Y esto es porque en realidad lo que hace es un montaje, un enlace, entre el directorio de la máquina principal y el directorio del contenedor, por eso no aparece como volúmen.
+
+[Inicio](#curso-de-docker)
