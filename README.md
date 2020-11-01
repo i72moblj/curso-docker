@@ -45,6 +45,7 @@
   - [4.3 Visualizar información de volúmenes](#4.3-Visualizar-información-de-volúmenes)
   - [4.4 Crear un directorio compartido con el host](#4.4-Crear-un-directorio-compartido-con-el-host)
   - [4.5 Compartir volúmenes entre contenedores](#4.5-Compartir-volúmenes-entre-contenedores)
+  - [4.6 Crear un volumen independiente](#4.6-Crear-un-volumen-independiente)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -4445,3 +4446,111 @@ Y también existe el comando `docker volume prune`, para eliminar los volúmenes
 **Material para la práctica:**
 
 > Práctica 13 - example_web.zip
+
+## 4.6 Crear un volumen independiente
+
+Vamos a ver cómo crear volúmenes con nuestros propios nombres, es decir, los creamos de manera manual en vez de que se creen de manera automática al crear el contenedor y les asigne el hash por defecto.
+
+Para crear un volumen
+
+```console
+$ sudo docker volume create vol1
+
+vol 1
+```
+
+Y si ahora listamos el directorio `/var/lib/docker/volumes` de la máquina host vemos que ya aparece por su nombre en vez del hash que le asigna automáticamente.
+
+```console
+# cd /var/lib/docker/volumes/
+
+# ls -l
+
+total 48
+drwxr-xr-x 3 root root  4096 nov  1 12:14 50e90c22f8da317c1750121c8a93bd9eb01e66d7692fd845a17585904fe0cba8
+drwxr-xr-x 3 root root  4096 oct 31 20:06 755b1ccd999f6e89d0c676a2ab478c03130b039a6a2068a31308f163ae761db7
+drwxr-xr-x 3 root root  4096 oct 12 20:41 a83dc1dbb05316b633fc96a5eacb8c9d40b3a4b73da9c1afae0b259b5d2959d6
+-rw------- 1 root root 65536 nov  1 19:14 metadata.db
+drwxr-xr-x 3 root root  4096 nov  1 19:14 vol1
+```
+
+Si inspeccionamos el volumen podemos ver el punto de montaje del volumen dentro de la máquina host
+
+```console
+$ sudo docker volume inspect vol1
+
+[
+    {
+        "CreatedAt": "2020-11-01T19:14:59+01:00",
+        "Driver": "local",
+        "Labels": {},
+        "Mountpoint": "/var/lib/docker/volumes/vol1/_data",
+        "Name": "vol1",
+        "Options": {},
+        "Scope": "local"
+    }
+]
+```
+
+Para asociar este volumen que yo he creado a un contenedor, lo hago a través de la opción `-v` indicando el nombre del volumen que yo he creado, dos puntos (:), seguido del directorio donde quiero que se monte en el contenedor.
+
+```console
+$ sudo docker run -it --name ubuntu7 -v vol1:/dir1 ubuntu bash
+
+root@5ebf55a3ffa1:/# 
+```
+
+Lo que va a hacer es asociar el volumen vol1 al directorio `/dir1` dentro del contenedor ubuntu7
+
+Y puedo comprobar que dentro del contenedor existe el directorio `/dir1` y que está comunicado con `/var/lib/docker/volumes/vol1/_data`.
+
+Si inspeccionamos el contenedor
+
+```console
+docker inspect ubuntu7
+```
+
+```
+	"HostConfig": {
+            "Binds": [
+                "vol1:/dir1"
+            ],
+```
+
+y más abajo
+
+```
+	"Mounts": [
+            {
+                "Type": "volume",
+                "Name": "vol1",
+                "Source": "/var/lib/docker/volumes/vol1/_data",
+                "Destination": "/dir1",
+                "Driver": "local",
+                "Mode": "z",
+                "RW": true,
+                "Propagation": ""
+            }
+        ],
+```
+
+Vemos que ahí está, nos muestra que:
+
+- es de tipo volúmen
+- que el volumen se llama vol1
+- que el origen es /var/lib/docker/volumes/vol1/_data dentro de la máquina host
+- que el destino es /dir1 dentro del contenedor
+
+Y este volumen podría ser compartido por otro contenedor
+
+```console
+docker run -it --name ubuntu8 -v vol1:/datos:ro ubuntu bash
+```
+
+Fijarse que ahora el mismo volumen lo he asignado al contenedor ubuntu8, pero en este caso el directorio dentro del contenedor va a ser /datos en vez de /dir1 como en el contenedor ubuntu7
+
+Además con la opción ":ro" lo que le estoy diciendo es que sea "read only", o sea, que el volumen sea de sólo lectura de forma que el contenedor ubuntu8 no puede modificar los ficheros existentes, ni añadir nuevos ficheros.
+
+Entonces hemos visto lo fácil que es crear volúmenes creados por mí y que una vez que los tengo, los puedo asociar a varios contenedores.
+
+[Inicio](#curso-de-docker)
