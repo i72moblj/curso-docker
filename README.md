@@ -44,6 +44,7 @@
   - [4.2 Crear un volumen en un contenedor](#4.2-Crear-un-volumen-en-un-contenedor)
   - [4.3 Visualizar información de volúmenes](#4.3-Visualizar-información-de-volúmenes)
   - [4.4 Crear un directorio compartido con el host](#4.4-Crear-un-directorio-compartido-con-el-host)
+  - [4.5 Compartir volúmenes entre contenedores](#4.5-Compartir-volúmenes-entre-contenedores)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -4276,11 +4277,6 @@ drwxr-xr-x 3 root root  4096 oct 12 20:41 a83dc1dbb05316b633fc96a5eacb8c9d40b3a4
 
 Fijarse que cuando se creaba un volumen, el nuevo volumen y el `metadata.db` tenían la misma fecha de creación, sin embargo, de esta forma sólo se ha actualizado el archivo `metadata.db`.
 
-
-
-
-
-
 De hecho si inspeccionamos el contenedor y vamos al apartado del montaje:
 
 ```console
@@ -4312,4 +4308,140 @@ Podemos ver que es de tipo "bind" en vez de tipo "volume".
 
 Y esto es porque en realidad lo que hace es un montaje, un enlace, entre el directorio de la máquina principal y el directorio del contenedor, por eso no aparece como volúmen.
 
-[Inicio](#curso-de-docker)
+## 4.5 Compartir volúmenes entre contenedores
+
+Vamos a ver cómo podemos compartir volúmenes entre contenedores.
+
+Entonces vamos a crear un volumen en un contenedor que luego sea utilizado por otros contenedores.
+
+Primero vamos a ver los contenedores que tenemos en `/var/lib/docker/volumes`
+
+```console
+# cd /var/lib/docker/volumes/
+
+# ls -l
+
+total 44
+drwxr-xr-x 3 root root  4096 oct 31 20:06 755b1ccd999f6e89d0c676a2ab478c03130b039a6a2068a31308f163ae761db7
+drwxr-xr-x 3 root root  4096 oct 12 20:41 a83dc1dbb05316b633fc96a5eacb8c9d40b3a4b73da9c1afae0b259b5d2959d6
+-rw------- 1 root root 65536 nov  1 10:44 metadata.db
+```
+
+Y ahora vamos a crear el contenedor
+
+```console
+$ sudo docker run -it -v /datos --name ubuntu4 ubuntu bash
+
+root@f93f786daebc:/# 
+```
+
+Vemos que dentro del contenedor se ha creado el directorio `/datos`
+
+```console
+root@f93f786daebc:/# ls -l
+
+total 52
+lrwxrwxrwx   1 root root    7 Sep 25 01:20 bin -> usr/bin
+drwxr-xr-x   2 root root 4096 Apr 15  2020 boot
+drwxr-xr-x   2 root root 4096 Nov  1 11:14 datos
+drwxr-xr-x   5 root root  360 Nov  1 11:14 dev
+drwxr-xr-x   1 root root 4096 Nov  1 11:14 etc
+drwxr-xr-x   2 root root 4096 Apr 15  2020 home
+lrwxrwxrwx   1 root root    7 Sep 25 01:20 lib -> usr/lib
+lrwxrwxrwx   1 root root    9 Sep 25 01:20 lib32 -> usr/lib32
+lrwxrwxrwx   1 root root    9 Sep 25 01:20 lib64 -> usr/lib64
+lrwxrwxrwx   1 root root   10 Sep 25 01:20 libx32 -> usr/libx32
+drwxr-xr-x   2 root root 4096 Sep 25 01:20 media
+drwxr-xr-x   2 root root 4096 Sep 25 01:20 mnt
+drwxr-xr-x   2 root root 4096 Sep 25 01:20 opt
+dr-xr-xr-x 335 root root    0 Nov  1 11:14 proc
+drwx------   2 root root 4096 Sep 25 01:23 root
+drwxr-xr-x   1 root root 4096 Sep 25 22:34 run
+lrwxrwxrwx   1 root root    8 Sep 25 01:20 sbin -> usr/sbin
+drwxr-xr-x   2 root root 4096 Sep 25 01:20 srv
+dr-xr-xr-x  13 root root    0 Nov  1 10:26 sys
+drwxrwxrwt   2 root root 4096 Sep 25 01:23 tmp
+drwxr-xr-x   1 root root 4096 Sep 25 01:20 usr
+drwxr-xr-x   1 root root 4096 Sep 25 01:23 var
+```
+
+Y que en la máquina host se ha creado un nuevo volumen en el directorio `/var/lib/docker/volumes`
+
+```console
+# ls -l
+
+total 44
+drwxr-xr-x 3 root root  4096 nov  1 12:14 50e90c22f8da317c1750121c8a93bd9eb01e66d7692fd845a17585904fe0cba8
+drwxr-xr-x 3 root root  4096 oct 31 20:06 755b1ccd999f6e89d0c676a2ab478c03130b039a6a2068a31308f163ae761db7
+drwxr-xr-x 3 root root  4096 oct 12 20:41 a83dc1dbb05316b633fc96a5eacb8c9d40b3a4b73da9c1afae0b259b5d2959d6
+-rw------- 1 root root 65536 nov  1 12:16 metadata.db
+```
+
+> **Tip:** Como a los volúmenes por defecto los nombra con un hash, si queremos ver cuál es el volumen que se ha creado, en Linux podemos hacer `ls -lt`, que los ordena por fecha, para saber cuál es el último. Esto además de inspeccionar el contenedor e irnos a la parte de "Mounts"
+
+Se podría comprobar, como ya hemos visto, que el contenido del directorio `/datos` del contenedor está asociado a ese volumen, al del directorio `/var/lib/docker/volumes/50e90c22f8da317c1750121c8a93bd9eb01e66d7692fd845a17585904fe0cba8/_data` de la máquina host y que la comunicación es bidireccional.
+
+Pero, ¿cómo podría hacer que otro contenedor compartiera ese volumen?
+
+Voy a crear otro contenedor llamado ubuntu5, y le voy a decir que como volúmenes utilice los del contenedor ubuntu4.
+
+```console
+$ sudo docker run -it --name ubuntu5 --volumes-from ubuntu4 ubuntu bash
+
+root@772bcebb4b3d:/# 
+```
+
+Podemos comprobar que dentro hay un directorio llamado `/datos`
+
+```console
+root@772bcebb4b3d:/# ls -l
+
+total 52
+lrwxrwxrwx   1 root root    7 Sep 25 01:20 bin -> usr/bin
+drwxr-xr-x   2 root root 4096 Apr 15  2020 boot
+drwxr-xr-x   2 root root 4096 Nov  1 11:14 datos
+drwxr-xr-x   5 root root  360 Nov  1 11:29 dev
+drwxr-xr-x   1 root root 4096 Nov  1 11:29 etc
+drwxr-xr-x   2 root root 4096 Apr 15  2020 home
+lrwxrwxrwx   1 root root    7 Sep 25 01:20 lib -> usr/lib
+lrwxrwxrwx   1 root root    9 Sep 25 01:20 lib32 -> usr/lib32
+lrwxrwxrwx   1 root root    9 Sep 25 01:20 lib64 -> usr/lib64
+lrwxrwxrwx   1 root root   10 Sep 25 01:20 libx32 -> usr/libx32
+drwxr-xr-x   2 root root 4096 Sep 25 01:20 media
+drwxr-xr-x   2 root root 4096 Sep 25 01:20 mnt
+drwxr-xr-x   2 root root 4096 Sep 25 01:20 opt
+dr-xr-xr-x 339 root root    0 Nov  1 11:29 proc
+drwx------   2 root root 4096 Sep 25 01:23 root
+drwxr-xr-x   1 root root 4096 Sep 25 22:34 run
+lrwxrwxrwx   1 root root    8 Sep 25 01:20 sbin -> usr/sbin
+drwxr-xr-x   2 root root 4096 Sep 25 01:20 srv
+dr-xr-xr-x  13 root root    0 Nov  1 10:26 sys
+drwxrwxrwt   2 root root 4096 Sep 25 01:23 tmp
+drwxr-xr-x   1 root root 4096 Sep 25 01:20 usr
+drwxr-xr-x   1 root root 4096 Sep 25 01:23 var
+```
+
+El directorio `/datos` se ha creado, sin yo indicárselo, pero como se había definido como volumen en el contenedor *ubuntu4*, pues lo toma de ahí.
+
+Podemos comprobar que la carpeta `/datos` del contenedor *ubuntu4*, la carpeta `/datos` del contenedor *ubuntu5* y la carpeta `/var/lib/docker/volumes/50e90c22f8da317c1750121c8a93bd9eb01e66d7692fd845a17585904fe0cba8/_data` de la máquina host, tienen el mismo contenido.
+
+De esta forma yo puedo tener varios contenedores apuntando al mismo volumen.
+
+Cuando no hay ningún contenedor apuntando a un volumen, éste ya no vale. En el momento en el que borro todos los contenedores que apuntan a un determinado volumen, el volumen no desaparece, pero ese volumen ya no lo puedo reutilizar más.
+
+Lo que sí puedo hacer es borrar algún contenedor, que mientras algún contenedor siga apuntando a ese volúmen, yo podré utilizarlo para otros contenedores. En el momento en el que ya no quede ninguno, el volumeno no desaparece, sigue existiendo, pero se queda inutilizable porque ya no tengo acceso a él, no hay ningún contenedor que apunte a él.
+
+Pero esto ocurre sólo si se borran o eliminan todos los contenedores que apuntan a ese volúmen, si se paran, aunque sea todos, están parados pero aún apuntan al contenedor y cuando se arranquen de nuevo seguirán teniendo disponible ese recurso compartido.
+
+El volumen queda inútil porque no hay ningún contenedor apuntando a él, pero el contenido no se pierden, entonces, si por error me ocurriera esta situación y quisiera reutilizar esa información, tendría que crear un nuevo contenedor, asociarle un nuevo volumen y copiar los datos del volumen antiguo al nuevo contenedor.
+
+Si sé cuál el y quisiera eliminarlo, podría utilizar el comando `docker volume rm`
+
+Y también existe el comando `docker volume prune`, para eliminar los volúmenes que están sin utilizar, es decir, los volúmenes a los que no le apunta ningún contenedor.
+
+**Ejercicio Práctico:**
+> Práctica 13 - Crear un directorio compartido.pdf
+
+**Material para la práctica:**
+
+> Práctica 13 - example_web.zip
