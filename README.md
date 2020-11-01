@@ -46,6 +46,7 @@
   - [4.4 Crear un directorio compartido con el host](#4.4-Crear-un-directorio-compartido-con-el-host)
   - [4.5 Compartir volúmenes entre contenedores](#4.5-Compartir-volúmenes-entre-contenedores)
   - [4.6 Crear un volumen independiente](#4.6-Crear-un-volumen-independiente)
+  - [4.7 Borrar un volumen](#4.7-Borrar-un-volumen)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -4507,31 +4508,30 @@ Y puedo comprobar que dentro del contenedor existe el directorio `/dir1` y que e
 Si inspeccionamos el contenedor
 
 ```console
-docker inspect ubuntu7
-```
+$ sudo docker inspect ubuntu7
 
-```
+    ...
 	"HostConfig": {
             "Binds": [
                 "vol1:/dir1"
             ],
-```
+    ...
 
-y más abajo
-
-```
+    ...
 	"Mounts": [
-            {
-                "Type": "volume",
-                "Name": "vol1",
-                "Source": "/var/lib/docker/volumes/vol1/_data",
-                "Destination": "/dir1",
-                "Driver": "local",
-                "Mode": "z",
-                "RW": true,
-                "Propagation": ""
-            }
-        ],
+        {
+            "Type": "volume",
+            "Name": "vol1",
+            "Source": "/var/lib/docker/volumes/vol1/_data",
+            "Destination": "/dir1",
+            "Driver": "local",
+            "Mode": "z",
+            "RW": true,
+            "Propagation": ""
+        }
+    ],
+    ...
+
 ```
 
 Vemos que ahí está, nos muestra que:
@@ -4544,13 +4544,94 @@ Vemos que ahí está, nos muestra que:
 Y este volumen podría ser compartido por otro contenedor
 
 ```console
-docker run -it --name ubuntu8 -v vol1:/datos:ro ubuntu bash
+$ sudo docker run -it --name ubuntu8 -v vol1:/datos:ro ubuntu bash
+
+root@a36295ae9c5c:/# 
 ```
 
-Fijarse que ahora el mismo volumen lo he asignado al contenedor ubuntu8, pero en este caso el directorio dentro del contenedor va a ser /datos en vez de /dir1 como en el contenedor ubuntu7
+Fijarse que ahora el mismo volumen lo he asignado al contenedor ubuntu8, pero en este caso el directorio dentro del contenedor va a ser `/datos` en vez de `/dir1` como en el contenedor ubuntu7
 
-Además con la opción ":ro" lo que le estoy diciendo es que sea "read only", o sea, que el volumen sea de sólo lectura de forma que el contenedor ubuntu8 no puede modificar los ficheros existentes, ni añadir nuevos ficheros.
+Además con la opción `:ro` lo que le estoy diciendo es que sea *read only*, o sea, que el volumen sea de sólo lectura de forma que el contenedor ubuntu8 no puede modificar los ficheros existentes, ni añadir nuevos ficheros.
 
-Entonces hemos visto lo fácil que es crear volúmenes creados por mí y que una vez que los tengo, los puedo asociar a varios contenedores.
+Si intento crear un fichero me va a dar error, me va a decir que el sistema de ficheros es de sólo lectura.
 
-[Inicio](#curso-de-docker)
+```console
+root@a36295ae9c5c:/# cd datos/
+
+root@a36295ae9c5c:/datos# ls
+
+root@a36295ae9c5c:/datos# touch fichero.txt
+
+touch: cannot touch 'fichero.txt': Read-only file system
+```
+
+Entonces hemos visto lo fácil que es crear volúmenes creados por mí y que, una vez que los tengo, los puedo asociar a uno o varios contenedores.
+
+## 4.7 Borrar un volumen
+
+Vamos a ver cómo podemos borrar volúmenes.
+
+Vamos a ver los volúmenes que tengo
+
+```console
+$ sudo docker volume ls
+
+DRIVER              VOLUME NAME
+local               50e90c22f8da317c1750121c8a93bd9eb01e66d7692fd845a17585904fe0cba8
+local               755b1ccd999f6e89d0c676a2ab478c03130b039a6a2068a31308f163ae761db7
+local               a83dc1dbb05316b633fc96a5eacb8c9d40b3a4b73da9c1afae0b259b5d2959d6
+local               vol1
+```
+
+Vamos borrar uno
+
+```console
+$ sudo docker rm a83dc1dbb05316b633fc96a5eacb8c9d40b3a4b73da9c1afae0b259b5d2959d6
+
+a83dc1dbb05316b633fc96a5eacb8c9d40b3a4b73da9c1afae0b259b5d2959d6
+```
+
+Y como ha pasado en otras ocasiones, si tenemos algún contenedor que está haciendo uso de ese volúmen, nos va a dar un error diciendo que el volumen está en uso.
+
+```console
+$ sudo docker volume rm vol1
+
+Error response from daemon: remove vol1: volume is in use - [5ebf55a3ffa16cc8ae7622d5e399ad596f85d514411b554167cd103d12c17c54, a36295ae9c5c06b4bf05e453b63c61f599ec6967b2a7518afa9ed1de137f23b4]
+```
+
+Nos dice que no se puede borrar un volumen vol1 porque tiene contenedores que lo usan y nos muestra una lista de los Ids de los contenedores que usan ese volúmen.
+
+Entonces, primero hay que borrar los contenedores que están apuntando a ese volumen y luego podremos borrar el volumen
+
+También tenemos el comando `docker volume prune`, que lo que hace es borrar los volúmenes que se han quedado inactivos porque ya no los usa ningún contenedor. Se les llama volúmenes *unused* (sin utilizar).
+
+Para ello voy a borrar los dos contenedores que utilizaban el volumen `vol1`
+
+```console
+$ sudo docker rm 5ebf55a3ffa16cc8ae7622d5e399ad596f85d514411b554167cd103d12c17c54
+
+5ebf55a3ffa16cc8ae7622d5e399ad596f85d514411b554167cd103d12c17c54
+
+$ sudo docker rm a36295ae9c5c06b4bf05e453b63c61f599ec6967b2a7518afa9ed1de137f23b4
+
+a36295ae9c5c06b4bf05e453b63c61f599ec6967b2a7518afa9ed1de137f23b4
+```
+
+Y vamos a borrar los volúmenes unused
+
+```console
+$ sudo docker volume prune
+
+WARNING! This will remove all local volumes not used by at least one container.
+Are you sure you want to continue? [y/N] y
+Deleted Volumes:
+vol1
+
+Total reclaimed space: 0B
+```
+
+Y nos avisa de que el comando va a borrar todos los volúmenes que no sean utilizados por al menos un contenedor.
+
+Al final me informa de los volúmenes que ha borrado y el espacio que ha liberado. El espacio liberado es lo que ocupan los datos dentro del volumen.
+
+En mi caso borra el volumen `vol1` pero el espacio liberado es 0 porque estaba vacío.
