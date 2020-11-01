@@ -4635,3 +4635,6 @@ Y nos avisa de que el comando va a borrar todos los volúmenes que no sean utili
 Al final me informa de los volúmenes que ha borrado y el espacio que ha liberado. El espacio liberado es lo que ocupan los datos dentro del volumen.
 
 En mi caso borra el volumen `vol1` pero el espacio liberado es 0 porque estaba vacío.
+
+**Ejercicio Práctico:**
+> Práctica 14 - Crear volúmenes y borrarlos.pdf
