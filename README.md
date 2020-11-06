@@ -50,6 +50,7 @@
 - [SECCIÓN 5: Crear y gestionar imágenes](#SECCIÓN-5-Crear-y-gestionar-imágenes)
   - [5.1 Introducción a las imágenes Docker](#5.1-Introducción-a-las-imágenes-Docker)
   - [5.2 Modificar un contenedor](#5.2-Modificar-un-contenedor)
+  - [5.3 Docker commit. Crear una imagen manualmente](#5.3-Docker-commit.-Crear-una-imagen-manualmente)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -4743,3 +4744,60 @@ Entonces vemos que es muy sencillo modificar elementos en un contenedor.
 Pero esos cambios sólo se han aplicado sobre este contenedor. Si elimino el contenedor, se pierden los cambios.
 
 Si ese contenedor me interesa mucho, por ejemplo, si determinado equipos necesitan ese contenedor modificado con ese comando, pues lo que hago es generar una imagen para poder crear luego contenedores basados en esa imagen modificada.
+
+## 5.3 Docker commit. Crear una imagen manualmente
+
+Una vez que hemos modificado el contenedor, vamos a ver cómo podemos crear una imagen manualmente a partir de ese contenedor.
+
+Esta no es la manera más adecuada de hacerlo, porque lo mejor es la construcción de imágenes automática, pero debemos saber que se puede hacer así por si me hace falta alguna vez.
+
+Al contenedor *ubuntu1* le instalamos el comando `wget`. Si yo quiero que otros contenedores hereden ese comando, ya no puedo crearlos a partir de la imagen original de *ubuntu*, porque no lo tiene, los tendría que crear a partir de otra imagen. En este caso vamos a crear una imagen a partir del contenedor *ubuntu1* al que yo le he instalado ese comando.
+
+Y para crear una nueva imagen a partir de un contenedor modificado utilizo el comando `docker commit`, que tiene dos parámetros, el primero es el contenedor del cual quiero crear la imagen y el segundo el nombre de la imagen que quiero crear. Al nombre de la imagen le puedo definir una etiqueta, pero si no le pongo nada, por defecto le pone *latest*.
+
+```console
+$ sudo docker commit ubuntu1 mi_ubuntu
+
+sha256:630ed8ded791e73616dd935cec5b23cf1d3fd9d4f40f97159dd4d4b95b9de649
+```
+
+Si miramos las imágenes que tengo
+
+```console
+$ sudo docker images
+
+REPOSITORY          TAG                 IMAGE ID            CREATED              SIZE
+mi_ubuntu           latest              630ed8ded791        About a minute ago   115MB
+ubuntu              latest              d70eaf7277ea        2 weeks ago          72.9MB
+```
+
+
+
++----------------------------------------------------+
+| docker commit <modifiedContainer> <newImage>:<tag> |
++----------------------------------------------------+
+
+El tag es optativo, ya que si lo dejamos por defecto será latest
+
+Ejemplo:
+---------
+
+Ya tenemos el contendor ubuntu1, que es un contenedor a partir de la imagen oficial de ubuntu y al que le hemos instalado el comando wget.
+
+docker commit ubuntu1 mi_ubuntu
+
+Y ya lo crea, podemos comprobarlo con 
+
+docker images
+
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+mi_ubuntu           latest              d25a7c6f864e        6 seconds ago       107MB
+ubuntu              latest              4e5021d210f6        6 weeks ago         64.2MB
+
+y vemos que le ha puesto la etiqueta latest
+
+Y ya está disponible para utilizarla y crear contenedores a partir de ella
+
+docker run -it mi_ubuntu bash
+
+y si dentro hacemos wget, vemos que lo tenemos disponible.
