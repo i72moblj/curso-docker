@@ -49,6 +49,7 @@
   - [4.7 Borrar un volumen](#4.7-Borrar-un-volumen)
 - [SECCIÓN 5: Crear y gestionar imágenes](#SECCIÓN-5-Crear-y-gestionar-imágenes)
   - [5.1 Introducción a las imágenes Docker](#5.1-Introducción-a-las-imágenes-Docker)
+  - [5.2 Modificar un contenedor](#5.2-Modificar-un-contenedor)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -4657,3 +4658,88 @@ Vamos a ver las distintas capas que forman una imagen, desde la más básica has
 - El contenedor, que es el único de tipo lectura y escritura. Cada contenedor es la suma de todas las capas de una determinada imagen, pero evidentemente, sólo la parte superior, la parte del contenedor es modificable.
 
 En los siguientes capítulos veremos cómo podemos modificar este contenedor para luego crear una imagen a partir de él.
+
+## 5.2 Modificar un contenedor
+
+En esta sección vamos a ver cómo podemos crear nuestras propias imagenes, tanto de manera manual, como automática mediante el fichero Dockerfile y también veremos cómo subir nuestras propias imagenes a DockerHub.
+
+En este apartado vamos a ver cómo podemos crear nuestras propias imagenes de manera manual y para ello, lo primero que vamos a ver es cómo podemos modificar un contenedor con respecto a la imagen original de la que proviene.
+
+Vamos a verlo con un ejemplo.
+
+Creamos un contenedor a partir de una imagen de Ubuntu
+
+```console
+$ sudo docker run -it --name ubuntu1 ubuntu bash
+
+root@54806ec13bfb:/# 
+```
+
+Como hemos comentado estos contenedores que provienen de una determinada imagen, tienen unas determinadas características, unos ficheros, unos directorios, ... lo interesante de los contenedores es que son contenedores vivos, que yo puedo ampliar sus características.
+
+Imaginemos que necesito, por ejemplo, el comando `wget` para traerme determinado contenido de una página web
+
+```console
+root@54806ec13bfb:/# wget https://www.google.es
+
+bash: wget: command not found
+```
+
+Y veo que este comando no está porque no está incluido en la imagen de ubuntu
+
+Pues si yo lo necesito, lo instalo dentro del contenedor
+
+```console
+root@54806ec13bfb:/# apt-get update
+...
+
+root@54806ec13bfb:/# apt-get install wget -y
+...
+```
+
+Una vez instalado, ya podemos utilizar el comando wget
+
+Entonces, una de las opciones que tengo para crear imágenes nuevas es a través de un contenedor modificado.
+
+Ahora paro el contenedor con el comando `exit` en la terminal del contenedor, que es interactivo.
+
+Si yo creo otro contenedor de ubuntu e intento ejecutar `wget`
+
+```console
+$ sudo docker run -it --name ubuntu2 ubuntu bash
+
+root@de2d35eb5a0d:/# wget
+
+bash: wget: command not found
+```
+
+Pues no lo va a encontrar porque procede de la misma imagen de ubuntu, que no trae el comando `wget`. El que sí lo tiene es el contenedor *ubuntu1* porque yo se lo he instalado.
+
+Por lo tanto, todos los cambios que le he hecho al contenedor *ubuntu1* no tienen nada que ver con los contenedores que se generan a partir de la imagen original de ubuntu.
+
+Hay un comando muy interesante que es `docker diff`, que me dice los cambios que ha tenido un contenedor
+
+```console
+$ sudo docker diff ubuntu1
+
+...
+C /usr/share/doc/mount/examples/fstab
+C /usr/share/doc/mount/mount.txt
+A /usr/share/doc/wget
+A /usr/share/doc/wget/copyright
+...
+```
+
+Me van a salir muchos cambios porque he hecho un `apt-get update`, un `apt-get upgrade` y he instalado el comando `wget`.
+
+En el listado me aparece el fichero que se ha modificado precedido de:
+
+- A (append): Si el fichero se ha añadido, si es un fichero nuevo
+- C (change): Si el fichero se ha modificado
+- D (delete): Si el fichero se ha borrado
+
+Entonces vemos que es muy sencillo modificar elementos en un contenedor.
+
+Pero esos cambios sólo se han aplicado sobre este contenedor. Si elimino el contenedor, se pierden los cambios.
+
+Si ese contenedor me interesa mucho, por ejemplo, si determinado equipos necesitan ese contenedor modificado con ese comando, pues lo que hago es generar una imagen para poder crear luego contenedores basados en esa imagen modificada.
