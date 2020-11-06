@@ -51,6 +51,7 @@
   - [5.1 Introducción a las imágenes Docker](#5.1-Introducción-a-las-imágenes-Docker)
   - [5.2 Modificar un contenedor](#5.2-Modificar-un-contenedor)
   - [5.3 Docker commit. Crear una imagen manualmente](#5.3-Docker-commit.-Crear-una-imagen-manualmente)
+  - [5.4 Dockerfile](#5.4-Dockerfile)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -4771,33 +4772,111 @@ mi_ubuntu           latest              630ed8ded791        About a minute ago  
 ubuntu              latest              d70eaf7277ea        2 weeks ago          72.9MB
 ```
 
+Vemos que me ha creado el repositorio *mi_ubuntu* con la etiqueta *latest*.
 
+Si ahora yo creo un contenedor a partir de la imagen *mi_ubuntu*
 
-+----------------------------------------------------+
-| docker commit <modifiedContainer> <newImage>:<tag> |
-+----------------------------------------------------+
+```console
+$ sudo docker run -it --rm mi_ubuntu bash
 
-El tag es optativo, ya que si lo dejamos por defecto será latest
+root@bc342c0c8171:/# wget
 
-Ejemplo:
----------
+wget: missing URL
+Usage: wget [OPTION]... [URL]...
 
-Ya tenemos el contendor ubuntu1, que es un contenedor a partir de la imagen oficial de ubuntu y al que le hemos instalado el comando wget.
+Try `wget --help' for more options.
+```
 
-docker commit ubuntu1 mi_ubuntu
+Podemos comprobar que el comando `wget` está disponible.
 
-Y ya lo crea, podemos comprobarlo con 
+Como hemos comentado, la forma manual de crear una imagen no es la más correcta, lo mejor es crearla automáticamente mediante el archivo *Dockerfile*, pero es bueno conocer que existe esta forma por si alguna vez nos hace falta.
 
-docker images
+## 5.4 Dockerfile
 
-REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
-mi_ubuntu           latest              d25a7c6f864e        6 seconds ago       107MB
-ubuntu              latest              4e5021d210f6        6 weeks ago         64.2MB
+A partir de ahora vamos a ver cómo construir imagenes de manera automática, a través de un fichero de configuración o instrucciones que se llama *Dockerfile*, que es la manera más rápida, sin tener que hacerlo a mano y luego hacer un `docker commit`.
 
-y vemos que le ha puesto la etiqueta latest
+El fichero *Dockerfile* tiene muchas opciones y aunque no vamos a verlas todas, pero vamos a ver las más importantes y luego con la documentación oficial podremos profundizar en cada una de ellas.
 
-Y ya está disponible para utilizarla y crear contenedores a partir de ella
+Primero vamos a ver un ejemplo de *Dockerfile*, y el mejor sitio para ver un ejemplo de *Dockerfile* es *Docker Hub*.
 
-docker run -it mi_ubuntu bash
+Vamos a ver el *Dockerfile* del contenedor más básico, que es el *hello-world*, así que lo buscamos en *Docker Hub*
 
-y si dentro hacemos wget, vemos que lo tenemos disponible.
+Si nos vamos a la parte de las etiquetas, y hacemos click sobre ellas, vemos que cada una es un enlace a una página de *GitHub* que contiene el fichero *Dockerfile* correspondiente a esa determinada imagen y a esa determinada etiqueta.
+
+Si hacemos click sobre la etiqueda *linux*, nos lleva a la página de *GitHub* del *Dockerfile* correspondiente y su contenido
+
+```Dockerfile
+FROM scratch
+COPY hello /
+CMD ["/hello"]
+```
+
+Podemos ver que un fichero *Dockerfile* es un fichero de texto que está formado por un conjunto de instrucciones, una detrás de otra, que contienen las instrucciones necesarias para construir la imagen.
+
+Veremos que hay una serie de directivas: `FROM`, `COPY`, `CMD`, `RUN`, `ENV`, ... que las vamos a ir viendo y que básicamente, por cada línea que aparece dentro del *Dockerfile* se crea una de las capas que hemos visto en la introducción de las imágenes.
+
+En este *Dockerfile*, lo que hace es
+
+- Desde una imagen, o desce cero, por así decirlo
+- Copia un determinado fichero, el fichero *hello* al / de la imagen
+- Lo ejecuta (el fichero *hello*)
+
+Entonces vemos que un Dockerfile está formado de un conjunto de comandos, uno detrás de otro, que son las direntes capas de la imagen.
+
+Vamos a ver un *Dockerfile* más complejo, vamos a ver el *Dockerfile* de *Ubuntu*, el de la etiqueta *latest*
+
+```Dockerfile
+FROM scratch
+ADD ubuntu-focal-core-cloudimg-amd64-root.tar.gz /
+
+# a few minor docker-specific tweaks
+# see https://github.com/docker/docker/blob/9a9fc01af8fb5d98b8eec0740716226fadb3735c/contrib/mkimage/debootstrap
+RUN set -xe \
+	\
+# https://github.com/docker/docker/blob/9a9fc01af8fb5d98b8eec0740716226fadb3735c/contrib/mkimage/debootstrap#L40-L48
+	&& echo '#!/bin/sh' > /usr/sbin/policy-rc.d \
+	&& echo 'exit 101' >> /usr/sbin/policy-rc.d \
+	&& chmod +x /usr/sbin/policy-rc.d \
+	\
+# https://github.com/docker/docker/blob/9a9fc01af8fb5d98b8eec0740716226fadb3735c/contrib/mkimage/debootstrap#L54-L56
+	&& dpkg-divert --local --rename --add /sbin/initctl \
+	&& cp -a /usr/sbin/policy-rc.d /sbin/initctl \
+	&& sed -i 's/^exit.*/exit 0/' /sbin/initctl \
+	\
+# https://github.com/docker/docker/blob/9a9fc01af8fb5d98b8eec0740716226fadb3735c/contrib/mkimage/debootstrap#L71-L78
+	&& echo 'force-unsafe-io' > /etc/dpkg/dpkg.cfg.d/docker-apt-speedup \
+	\
+# https://github.com/docker/docker/blob/9a9fc01af8fb5d98b8eec0740716226fadb3735c/contrib/mkimage/debootstrap#L85-L105
+	&& echo 'DPkg::Post-Invoke { "rm -f /var/cache/apt/archives/*.deb /var/cache/apt/archives/partial/*.deb /var/cache/apt/*.bin || true"; };' > /etc/apt/apt.conf.d/docker-clean \
+	&& echo 'APT::Update::Post-Invoke { "rm -f /var/cache/apt/archives/*.deb /var/cache/apt/archives/partial/*.deb /var/cache/apt/*.bin || true"; };' >> /etc/apt/apt.conf.d/docker-clean \
+	&& echo 'Dir::Cache::pkgcache ""; Dir::Cache::srcpkgcache "";' >> /etc/apt/apt.conf.d/docker-clean \
+	\
+# https://github.com/docker/docker/blob/9a9fc01af8fb5d98b8eec0740716226fadb3735c/contrib/mkimage/debootstrap#L109-L115
+	&& echo 'Acquire::Languages "none";' > /etc/apt/apt.conf.d/docker-no-languages \
+	\
+# https://github.com/docker/docker/blob/9a9fc01af8fb5d98b8eec0740716226fadb3735c/contrib/mkimage/debootstrap#L118-L130
+	&& echo 'Acquire::GzipIndexes "true"; Acquire::CompressionTypes::Order:: "gz";' > /etc/apt/apt.conf.d/docker-gzip-indexes \
+	\
+# https://github.com/docker/docker/blob/9a9fc01af8fb5d98b8eec0740716226fadb3735c/contrib/mkimage/debootstrap#L134-L151
+	&& echo 'Apt::AutoRemove::SuggestsImportant "false";' > /etc/apt/apt.conf.d/docker-autoremove-suggests
+
+# verify that the APT lists files do not exist
+RUN [ -z "$(apt-get indextargets)" ]
+# (see https://bugs.launchpad.net/cloud-images/+bug/1699913)
+
+# make systemd-detect-virt return "docker"
+# See: https://github.com/systemd/systemd/blob/aa0c34279ee40bce2f9681b496922dedbadfca19/src/basic/virt.c#L434
+RUN mkdir -p /run/systemd && echo 'docker' > /run/systemd/container
+
+CMD ["/bin/bash"]
+```
+
+Como podemos ver, este *Dockerfile* tiene bastantes más comandos, pero que siguen la misma filosofía, voy teniendo claúsulas, directivas y cada una de ellas ejecuta una serie de cosas y cada uno de estos comandos es una capa de la imagen.
+
+Entonces, por muy complejo que sea un *Dockerfile*, al final todos funcionan de la misma manera, que es que tengo una serie de directivas que voy a utilizar para ir añadiendo capas sucesivas a la imagen.
+
+Si nos vamos a la documentación oficial, la sección referente a [Dockerfile reference](https://docs.docker.com/engine/reference/builder/), vemos a la derecha el conjunto de directivas disponibles y si accedemos a ellas, nos muestra para qué sirven y cómo usarlas.
+
+Al final de la lista vemos  [Dockerfile examples](https://docs.docker.com/engine/reference/builder/#dockerfile-examples), que me muestra unos ejemplos de ficheros *Dockerfile*.
+
+Ya las iremos viendo.
