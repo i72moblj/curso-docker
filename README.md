@@ -54,6 +54,7 @@
   - [5.4 Dockerfile](#5.4-Dockerfile)
   - [5.5 Crear una imagen de un Dockerfile](##-5.5-Crear-una-imagen-de-un-Dockerfile)
   - [5.6 RUN](##-5.6-RUN)
+  - [5.7 CMD](##-5.7-CMD)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -5280,6 +5281,8 @@ Successfully tagged imagen_python:v1
 
 Y como vemos, los primeros pasos se los ahorra porque ya los ha hecho, vemos que pone *Using cache* y lo que se descarga e instala es lo relativo al último comando `RUN`, que es lo nuevo.
 
+Lo del *Using cache* es porque, como dijimos al principio del curso, los contenedores comparten las capas y si ya están creadas, las comparten, no las vuelven a crear. Por lo tanto crean sólo la parte que no existe aún y una vez creada, estará disponible para compartir con otras imágenes.
+
 Y si comprobamos las imágenes que tenemos
 
 ```console
@@ -5309,3 +5312,375 @@ Y vamos a comprobar que tenemos disponible todo lo que le hemos indicado en el *
 - podemos usar ping, y vemos que también lo tiene
 
 Entonces, recapitulando, hemos visto cómo a través de un fichero *Dockerfile* podemos añadir distintos elementos y que a partir de esa imagen creada, todos los contenedores que creemos a partir de ella van a tener disponible todas esas características.
+
+## 5.7 CMD
+
+La directiva `CMD` lo que nos va a indicar es el comando por defecto del contenedor, es decir, una vez que hemos arrancado el contenedor, el `CMD` se va a ejecutar para indicar el valor o el comando por defecto.
+
+Dentro de un `Dockerfile` sólo puede haber un comando `CMD`. Bueno, en realidad puede haber todos los que quieras, pero el que vale es el último. 
+
+Esto es importante porque como las imágenes de Docker están formadas por capas, pues puede que una determinada capa tenga un `CMD`, como por ejemplo, en ubuntu, ejecutar la bash. Pero si después aparece otro comando `CMD` prevalece sobre el anterior, el que vale es el último.
+
+Siguiendo con el `Dockerfile` de ejemplo:
+
+```Dockerfile
+FROM ubuntu
+RUN apt-get update
+RUN apt-get install -y python
+RUN echo 1.0 >> /etc/version && apt-get install -y git \
+    && apt-get install -y iputils-ping
+CMD echo "Welcome to this container"
+```
+
+Este CMD cuando lo ejecuta, ejecuta una *shell*, ejecuta el `/bin/sh -c` que es para lanzar un comando.
+
+Vamos a construir la imagen:
+
+```console
+$ sudo docker image build -t image:v1 .
+
+Sending build context to Docker daemon  2.048kB
+Step 1/5 : FROM ubuntu
+ ---> d70eaf7277ea
+Step 2/5 : RUN apt-get update
+ ---> Using cache
+ ---> 6e3128ffb1ed
+Step 3/5 : RUN apt-get install -y python
+ ---> Using cache
+ ---> 119a9b423ed3
+Step 4/5 : RUN echo 1.0 >> /etc/version && apt-get install -y git     && apt-get install -y iputils-ping
+ ---> Using cache
+ ---> df7b1d8e6cce
+Step 5/5 : CMD echo "Welcome to this container"
+ ---> Running in 01cebe271038
+Removing intermediate container 01cebe271038
+ ---> bd4695c9555d
+Successfully built bd4695c9555d
+Successfully tagged image:v1
+```
+
+Lo primero que vemos es que hace todos los pasos anteriores, que ya los teníamos hechos, por eso aparece *Using cache* y también vemos que el último paso o última capa es el `CMD` que le hemos especificado, que por cierto vemos que crea un contenedor temporal para este fin.
+
+Vamos a comprobar que se ha creado la imagen
+
+```console
+$ sudo docker images
+
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+image               v1                  bd4695c9555d        3 minutes ago       239MB
+imagen_python       v1                  df7b1d8e6cce        About an hour ago   239MB
+imagen_python       latest              119a9b423ed3        10 hours ago        135MB
+mi_ubuntu           latest              630ed8ded791        25 hours ago        115MB
+ubuntu              latest              d70eaf7277ea        2 weeks ago         72.9MB
+```
+
+Con un mismo fichero *Dockerfile* puedo crear las imágenes que quiera con nombres distintos y los tags que quiera, aunque luego, por dentro compartirían la pila o capas esas imágenes. De ahí lo de *Using cache* al construir las imágenes.
+
+Vamos a crear un contenedor a partir la nueva imagen creada
+
+```console
+$ sudo docker run -it --rm image:v1
+
+Welcome to this container
+```
+
+Este contenedor, una vez creado, se va a ejecutar y justo después, el primer comando que va a ejecutar es el que aparezca en la directiva `CMD`.
+
+Voy a borrar la imagen.
+
+```console
+$ sudo docker rmi image:v1
+
+Untagged: image:v1
+Deleted: sha256:bd4695c9555d492109fc1072e67c54c60397b3a636bef9710de69bfa7db6e49c
+```
+
+Vuelvo a editar el `Dockerfile`. 
+
+Hay otra opción del `CMD` que es poner corchetes, `[]`, y lo que hace es que permite es ejecutar el contenedor en vez de como *bash*, como *exec*.
+
+Dentro de los corchetes, lo que estoy poniendo es un formato *json*, donde el primer elemento es el comando o ejecutable y el segundo elemento los parámetros.
+
+```Dockerfile
+FROM ubuntu
+RUN apt-get update
+RUN apt-get install -y python
+RUN echo 1.0 >> /etc/version && apt-get install -y git \
+    && apt-get install -y iputils-ping
+CMD ["echo", "Welcome to this container"]
+```
+
+La diferencia de esta opción con la que hemos visto en el ejemplo anterior es que el comando anterior se ejecutaba con `/bin/sh -c`, es decir, ejecuta una *shell*, y en esta opción se ejecuta con *exec*.
+
+De esta forma me permite hacer ciertas cosas que en una shell cuando se expande pues me podrían dar error. De hecho este es el método preferido porque así mi contenedor no depende de una bash o una shell, porque no la tuviera, porque no me interesara tener una bash o una shell.
+
+Vamos a construir la misma imagen anterior pero mediante este método.
+
+```console
+$ sudo docker build -t image:v1 .
+
+Sending build context to Docker daemon  2.048kB
+Step 1/5 : FROM ubuntu
+ ---> d70eaf7277ea
+Step 2/5 : RUN apt-get update
+ ---> Using cache
+ ---> 6e3128ffb1ed
+Step 3/5 : RUN apt-get install -y python
+ ---> Using cache
+ ---> 119a9b423ed3
+Step 4/5 : RUN echo 1.0 >> /etc/version && apt-get install -y git     && apt-get install -y iputils-ping
+ ---> Using cache
+ ---> df7b1d8e6cce
+Step 5/5 : CMD ["echo","Welcome to this container"]
+ ---> Running in 6b5438f9145c
+Removing intermediate container 6b5438f9145c
+ ---> 77b5d0485c28
+Successfully built 77b5d0485c28
+Successfully tagged image:v1
+```
+
+Y vamos a crear un contenedor a partir de ella
+
+```console
+$ sudo docker run -it --rm image:v1
+
+Welcome to this container
+```
+
+Vemos que el resultado es el mismo.
+
+Para ver la diferencia, vamos a ejecutar el comando `docker image history`, que me daba el histórico de una imagen
+
+```console
+$ sudo docker image history image:v1
+
+IMAGE               CREATED             CREATED BY                                      SIZE                COMMENT
+77b5d0485c28        3 minutes ago       /bin/sh -c #(nop)  CMD ["echo" "Welcome to t…   0B                  
+df7b1d8e6cce        2 hours ago         /bin/sh -c echo 1.0 >> /etc/version && apt-g…   104MB               
+119a9b423ed3        10 hours ago        /bin/sh -c apt-get install -y python            36.3MB              
+6e3128ffb1ed        10 hours ago        /bin/sh -c apt-get update                       25.9MB              
+d70eaf7277ea        2 weeks ago         /bin/sh -c #(nop)  CMD ["/bin/bash"]            0B                  
+<missing>           2 weeks ago         /bin/sh -c mkdir -p /run/systemd && echo 'do…   7B                  
+<missing>           2 weeks ago         /bin/sh -c [ -z "$(apt-get indextargets)" ]     0B                  
+<missing>           2 weeks ago         /bin/sh -c set -xe   && echo '#!/bin/sh' > /…   811B                
+<missing>           2 weeks ago         /bin/sh -c #(nop) ADD file:435d9776fdd3a1834…   72.9MB    
+```
+
+- Vemos que llega hasta el `CMD` de ubuntu, que por cierto, como se dijo, podía haber más de un `CMD`, pero sólo ejecuta el último.
+- Ejecuta los comandos que le he especificado en el comando `RUN`
+- Y en el último paso vemos que ejecuta directamente el comando y no a través de una bash.
+
+Volvemos a borrar la imagen
+
+```console
+$ sudo docker rmi image:v1
+
+Untagged: image:v1
+Deleted: sha256:77b5d0485c28dae865b775b1821b6333a412b933b210267d9ca325e174b09838
+```
+
+Entonces, el uso de un método u otro dependerá de lo que vayamos a hacer.
+
+Como ejemplo vamos a poner en el CMD del Dockerfile que ejecute /bin/bash
+
+```Dockerfile
+FROM ubuntu
+RUN apt-get update
+RUN apt-get install -y python
+RUN echo 1.0 >> /etc/version && apt-get install -y git \
+    && apt-get install -y iputils-ping
+CMD ["echo", "Welcome to this container"]
+```
+
+Vuelvo a crear la imagen
+
+docker image build -t image:v1 .
+
+Vuelvo a crear un contenedor a partir de esa imagen
+
+docker run -it --rm image:v1
+
+En este caso al crearse el contenedor me entra directamente en la bash.
+
+Pero hay un pequeño problema, vamos ejecutar otra vez
+
+docker image history image:v1
+
+IMAGE               CREATED             CREATED BY                                      SIZE                COMMENT
+2d013d241819        2 minutes ago       /bin/sh -c #(nop)  CMD ["/bin/sh" "-c" "/bin…   0B                  
+c1684d66c447        13 minutes ago      /bin/sh -c echo "1.0" >> /etc/version && apt…   89.3MB              
+670baf936c45        14 minutes ago      /bin/sh -c apt-get install -y python            35.1MB              
+73a83b0a094a        14 minutes ago      /bin/sh -c apt-get update                       28.5MB              
+4e5021d210f6        7 weeks ago         /bin/sh -c #(nop)  CMD ["/bin/bash"]            0B                  
+<missing>           7 weeks ago         /bin/sh -c mkdir -p /run/systemd && echo 'do…   7B                  
+<missing>           7 weeks ago         /bin/sh -c set -xe   && echo '#!/bin/sh' > /…   745B                
+<missing>           7 weeks ago         /bin/sh -c [ -z "$(apt-get indextargets)" ]     987kB               
+<missing>           7 weeks ago         /bin/sh -c #(nop) ADD file:594fa35cf803361e6…   63.2MB 
+
+En este caso, lo que hace en el último punto es hacer un CMD por debajo llamando a "/bin/sh -c" y luego llama al "/bin/bash".
+
+Esto no es del todo correcto, porque estoy llamando a una bash desde una shell, y no es lo que yo quería, lo que yo quería es que me ejecutara la shell al entrar.
+
+El comando más correcto habría sido (como está en el CMD de ubuntu)
+
+CMD ["/bin/bash"] 
+
+En esta ocasión funciona exactamente igual, pero en cualquier otra ocasión me puede dar algún pequeño problema.
+
+La recomendación es utilizar el formato json para llamar a nuestro comando inicial con el cual quiero que arranque nuestro contenedor.
+
+Entonces vamos a modificar el fichero *Dockerfile* para que lo último que se ejecute un contenedor creado a partir de esta imagen, ejecute un `/bin/bash`
+
+FROM ubuntu
+RUN apt-get update
+RUN apt-get install -y python
+RUN echo 1.0 >> /etc/version && apt-get install -y git \
+    && apt-get install -y iputils-ping
+CMD ["/bin/bash"]
+
+Vuelvo a crear la imagen
+
+```console
+$ sudo docker build -t image:v1 .
+
+Sending build context to Docker daemon  2.048kB
+Step 1/5 : FROM ubuntu
+ ---> d70eaf7277ea
+Step 2/5 : RUN apt-get update
+ ---> Using cache
+ ---> 6e3128ffb1ed
+Step 3/5 : RUN apt-get install -y python
+ ---> Using cache
+ ---> 119a9b423ed3
+Step 4/5 : RUN echo 1.0 >> /etc/version && apt-get install -y git     && apt-get install -y iputils-ping
+ ---> Using cache
+ ---> df7b1d8e6cce
+Step 5/5 : CMD /bin/bash
+ ---> Running in 3b780f94a442
+Removing intermediate container 3b780f94a442
+ ---> ddd63f372939
+Successfully built ddd63f372939
+Successfully tagged image:v1
+```
+
+Vuelvo a crear un contenedor a partir de esa imagen
+
+```console
+$ sudo docker run -it --rm image:v1
+
+root@6ea2dcf0ca7e:/# 
+```
+
+Y vuelvo a ver el historial de la imagen
+
+```console
+$ sudo docker image history image:v1
+
+[sudo] password for jesus: 
+IMAGE               CREATED              CREATED BY                                      SIZE                COMMENT
+ddd63f372939        About a minute ago   /bin/sh -c #(nop)  CMD ["/bin/sh" "-c" "/bin…   0B                  
+df7b1d8e6cce        2 hours ago          /bin/sh -c echo 1.0 >> /etc/version && apt-g…   104MB               
+119a9b423ed3        10 hours ago         /bin/sh -c apt-get install -y python            36.3MB              
+6e3128ffb1ed        10 hours ago         /bin/sh -c apt-get update                       25.9MB              
+d70eaf7277ea        2 weeks ago          /bin/sh -c #(nop)  CMD ["/bin/bash"]            0B                  
+<missing>           2 weeks ago          /bin/sh -c mkdir -p /run/systemd && echo 'do…   7B                  
+<missing>           2 weeks ago          /bin/sh -c [ -z "$(apt-get indextargets)" ]     0B                  
+<missing>           2 weeks ago          /bin/sh -c set -xe   && echo '#!/bin/sh' > /…   811B                
+<missing>           2 weeks ago          /bin/sh -c #(nop) ADD file:435d9776fdd3a1834…   72.9MB  
+```
+
+Fijarse que en el último paso lo que hace en realidad es llamar al `/bin/sh -c` y luego llama al `/bin/bash`. Lo cual no es correcto, porque de esta forma yo estoy llamando a una *bash* desde una *shell*. Y eso no es lo que yo quería, lo que yo quería es que me ejecutara la shell al entrar. En este caso funciona exactamente igual, pero en alguna otra ocasión me puede dar algún pequeño problema. La recomentdación es utilizar el formato json para indicar nuestro comando inicial con el que quiero que arranque nuestro contenedor.
+
+Por lo tanto el comando más correcto habría sido `CMD ["/bin/bash"]` entre corchetes, en formato *json*
+
+Vuelvo a borrar la imagen
+
+```console
+$ sudo docker rmi image:v1
+
+Untagged: image:v1
+Deleted: sha256:ddd63f3729390ea52064b8986ec38ce659f233bc967f6645932d4803cf60c6ff
+```
+
+Vuelvo a editar el *Dockerfile*
+
+```Dockerfile
+FROM ubuntu
+RUN apt-get update
+RUN apt-get install -y python
+RUN echo 1.0 >> /etc/version && apt-get install -y git \
+    && apt-get install -y iputils-ping
+CMD ["/bin/bash"]
+```
+
+Vuelvo a construir la imagen
+
+```console
+$ sudo docker build -t image:v1 .
+
+Sending build context to Docker daemon  2.048kB
+Step 1/5 : FROM ubuntu
+ ---> d70eaf7277ea
+Step 2/5 : RUN apt-get update
+ ---> Using cache
+ ---> 6e3128ffb1ed
+Step 3/5 : RUN apt-get install -y python
+ ---> Using cache
+ ---> 119a9b423ed3
+Step 4/5 : RUN echo 1.0 >> /etc/version && apt-get install -y git     && apt-get install -y iputils-ping
+ ---> Using cache
+ ---> df7b1d8e6cce
+Step 5/5 : CMD ["/bin/bash"]
+ ---> Running in bf120244e0b8
+Removing intermediate container bf120244e0b8
+ ---> a86bd6cfc218
+Successfully built a86bd6cfc218
+Successfully tagged image:v1
+```
+
+Vuelvo a ver el historial de la imagen
+
+```console
+$ sudo docker image history image:v1
+
+IMAGE               CREATED              CREATED BY                                      SIZE                COMMENT
+a86bd6cfc218        About a minute ago   /bin/sh -c #(nop)  CMD ["/bin/bash"]            0B                  
+df7b1d8e6cce        2 hours ago          /bin/sh -c echo 1.0 >> /etc/version && apt-g…   104MB               
+119a9b423ed3        11 hours ago         /bin/sh -c apt-get install -y python            36.3MB              
+6e3128ffb1ed        11 hours ago         /bin/sh -c apt-get update                       25.9MB              
+d70eaf7277ea        2 weeks ago          /bin/sh -c #(nop)  CMD ["/bin/bash"]            0B                  
+<missing>           2 weeks ago          /bin/sh -c mkdir -p /run/systemd && echo 'do…   7B                  
+<missing>           2 weeks ago          /bin/sh -c [ -z "$(apt-get indextargets)" ]     0B                  
+<missing>           2 weeks ago          /bin/sh -c set -xe   && echo '#!/bin/sh' > /…   811B                
+<missing>           2 weeks ago          /bin/sh -c #(nop) ADD file:435d9776fdd3a1834…   72.9MB 
+```
+
+Ahora podemos ver que ya me lo pone correctamente `CMD ["/bin/bash"]`.
+
+Con esta opción, si yo creo un contenedor a través de esta imagen, me entra directamente en el bash.
+
+Importante
+-----------
+
+Si tenemos un error durante la construcción de una imagen a través de un Dockerfile, y lo arreglamos y sigue dando el mismo fallo, probablemente haya que añadir --no-cache al construir la imagen.
+
+docker image build --no-cache -t image:v1 .
+
+Eso es porque:
+- Por defecto, Docker cachea los comandos para reducir el tiempo empleado en la construcción de imágenes. A menos que haya algún cambio antes de ese comando (o en la misma línea).
+- Las distribuciones Linux se actualizan regularmente, y requieren que ejecutes "apt-get update" frecuentemente, de otra manera "apt-get install" podría no funcionar como se esperaba.
+
+Entonces, si ha creado la imagen anteriormente (con una distribución de Linux que recientemente tuvo algunas actualizaciones), y desea agregar algunas bibliotecas más, por ejemplo:
+
+RUN apt-get update
+RUN apt-get install -y s3cmd postgresql wget build-essential descomprimir gawk
+
+El comando "apt-get update" se omitirá ya que ya está almacenado en caché, la administración de su paquete (es decir, apt-get) no estaría actualizada mientras pensaba que siempre debería estarlo.
+
+A mí me daba el error:
+
+The command '/bin/sh -c apt-get install -y git' returned a non-zero code: 100
+
+Y era que me había equivocado al escribir ese comando, y como el apt-update estaba antes, pues lo tenía cacheado y no se actualizaba.
+
+Y al construir la imagen con --no-cache se solucionó el problema
