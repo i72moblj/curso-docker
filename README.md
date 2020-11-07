@@ -53,6 +53,7 @@
   - [5.3 Docker commit. Crear una imagen manualmente](#5.3-Docker-commit.-Crear-una-imagen-manualmente)
   - [5.4 Dockerfile](#5.4-Dockerfile)
   - [5.5 Crear una imagen de un Dockerfile](##-5.5-Crear-una-imagen-de-un-Dockerfile)
+  - [5.6 RUN](##-5.6-RUN)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -5155,4 +5156,156 @@ Type "help", "copyright", "credits" or "license" for more information.
 
 Vemos que me ha arrancado este contenedor y me ha ejecutado el script python
 
-Salimos con exit()
+Salimos con `exit()`
+
+## 5.6 RUN
+
+Antes que nada, vamos a volver a comando `docker image`, que nos permite obtener información sobre una determinada imagen.
+
+Y dentro de `docker image` tenemos el comando `history`, que nos permite ver los cambios por los que ha pasado una imagen.
+
+```console
+$ sudo docker image history imagen_python
+
+IMAGE               CREATED             CREATED BY                                      SIZE                COMMENT
+119a9b423ed3        8 hours ago         /bin/sh -c apt-get install -y python            36.3MB              
+6e3128ffb1ed        8 hours ago         /bin/sh -c apt-get update                       25.9MB              
+d70eaf7277ea        2 weeks ago         /bin/sh -c #(nop)  CMD ["/bin/bash"]            0B                  
+<missing>           2 weeks ago         /bin/sh -c mkdir -p /run/systemd && echo 'do…   7B                  
+<missing>           2 weeks ago         /bin/sh -c [ -z "$(apt-get indextargets)" ]     0B                  
+<missing>           2 weeks ago         /bin/sh -c set -xe   && echo '#!/bin/sh' > /…   811B                
+<missing>           2 weeks ago         /bin/sh -c #(nop) ADD file:435d9776fdd3a1834…   72.9MB
+```
+
+Podemos ver todos los pasos que se han ido dando a lo largo de una imagen. Y el orden de los pasos es de abajo hasta arriba.
+
+- Desde el primer paso de abajo hasta el `CMD ["/bin/bash"]`, que sería el último comando que se ejecutaría al terminar ubuntu, son las capas de la imagen que elegimos como sistema operativo base.
+- A continuación vendría la capa de actualización de repositorios con `apt-get update`
+- Y por último, la capa de instalar python con `apt-get install -y python`.
+
+Bueno, pues volvemos al comando `RUN`. Seguimos con el mismo fichero *Dockerfile*.
+
+```Dockerfile
+FROM ubuntu
+RUN apt-get update
+RUN apt-get install -y python
+RUN echo 1.0 >> /etc/version && apt-get install -y git \
+    && apt-get install -y iputils-ping
+```
+
+Vemos que el comando `RUN`, además de poder poner un comando por línea, tenemos la posibilidad de utilizar `&&`.
+
+Por ejemplo, si tenemos una unidad funcional, o sea, una serie de comandos relacionados que forman parte de una funcionalidad que le quiero añadir a la imagen, no tiene sentido poner cada comando en un `RUN`, porque al final voy a tener muchísimas capas.
+
+Entonces, con el `&&` lo que voy a conseguir es que se ejecuten los comandos uno detrás de otro, pero dentro de la misma capa.
+
+La barra invertida `\` lo que indica es que el comando continua en la línea siguiente.
+
+Ahora vamos a crear la imagen
+
+```console
+$ sudo docker build -t imagen_python:v1 .
+
+Sending build context to Docker daemon  2.048kB
+Step 1/4 : FROM ubuntu
+ ---> d70eaf7277ea
+Step 2/4 : RUN apt-get update
+ ---> Using cache
+ ---> 6e3128ffb1ed
+Step 3/4 : RUN apt-get install -y python
+ ---> Using cache
+ ---> 119a9b423ed3
+Step 4/4 : RUN echo 1.0 >> /etc/version && apt-get install -y git     && apt-get install -y iputils-ping
+ ---> Running in df1d187fd1ee
+Reading package lists...
+Building dependency tree...
+Reading state information...
+The following additional packages will be installed:
+  ca-certificates git-man krb5-locales less libasn1-8-heimdal libbrotli1
+  libbsd0 libcbor0.6 libcurl3-gnutls libedit2 liberror-perl libfido2-1
+  libgdbm-compat4 libgdbm6 libgssapi-krb5-2 libgssapi3-heimdal
+  libhcrypto4-heimdal libheimbase1-heimdal libheimntlm0-heimdal
+  libhx509-5-heimdal libk5crypto3 libkeyutils1 libkrb5-26-heimdal libkrb5-3
+  libkrb5support0 libldap-2.4-2 libldap-common libnghttp2-14 libperl5.30
+  libpsl5 libroken18-heimdal librtmp1 libsasl2-2 libsasl2-modules
+  libsasl2-modules-db libssh-4 libwind0-heimdal libx11-6 libx11-data libxau6
+  libxcb1 libxdmcp6 libxext6 libxmuu1 netbase openssh-client openssl patch
+  perl perl-base perl-modules-5.30 publicsuffix xauth
+Suggested packages:
+  gettext-base git-daemon-run | git-daemon-sysvinit git-doc git-el git-email
+  git-gui gitk gitweb git-cvs git-mediawiki git-svn gdbm-l10n krb5-doc
+  krb5-user libsasl2-modules-gssapi-mit | libsasl2-modules-gssapi-heimdal
+  libsasl2-modules-ldap libsasl2-modules-otp libsasl2-modules-sql keychain
+  libpam-ssh monkeysphere ssh-askpass ed diffutils-doc perl-doc
+  libterm-readline-gnu-perl | libterm-readline-perl-perl make libb-debug-perl
+  liblocale-codes-perl
+The following NEW packages will be installed:
+  ca-certificates git git-man krb5-locales less libasn1-8-heimdal libbrotli1
+  libbsd0 libcbor0.6 libcurl3-gnutls libedit2 liberror-perl libfido2-1
+  libgdbm-compat4 libgdbm6 libgssapi-krb5-2 libgssapi3-heimdal
+  libhcrypto4-heimdal libheimbase1-heimdal libheimntlm0-heimdal
+  libhx509-5-heimdal libk5crypto3 libkeyutils1 libkrb5-26-heimdal libkrb5-3
+  libkrb5support0 libldap-2.4-2 libldap-common libnghttp2-14 libperl5.30
+  libpsl5 libroken18-heimdal librtmp1 libsasl2-2 libsasl2-modules
+  libsasl2-modules-db libssh-4 libwind0-heimdal libx11-6 libx11-data libxau6
+  libxcb1 libxdmcp6 libxext6 libxmuu1 netbase openssh-client openssl patch
+  perl perl-modules-5.30 publicsuffix xauth
+The following packages will be upgraded:
+  perl-base
+1 upgraded, 53 newly installed, 0 to remove and 3 not upgraded.
+Need to get 19.3 MB of archives.
+After this operation, 105 MB of additional disk space will be used.
+Get:1 http://archive.ubuntu.com/ubuntu focal-updates/main amd64 perl-base amd64 5.30.0-9ubuntu0.2 [1513 kB]
+Get:2 http://archive.ubuntu.com/ubuntu focal-updates/main amd64 perl-modules-5.30 all 5.30.0-9ubuntu0.2 [2738 kB]
+...
+...
+...
+Unpacking iputils-ping (3:20190709-3) ...
+Selecting previously unselected package libpam-cap:amd64.
+Preparing to unpack .../libpam-cap_1%3a2.32-1_amd64.deb ...
+Unpacking libpam-cap:amd64 (1:2.32-1) ...
+Setting up libcap2:amd64 (1:2.32-1) ...
+Setting up libcap2-bin (1:2.32-1) ...
+Setting up libpam-cap:amd64 (1:2.32-1) ...
+debconf: unable to initialize frontend: Dialog
+debconf: (TERM is not set, so the dialog frontend is not usable.)
+debconf: falling back to frontend: Readline
+Setting up iputils-ping (3:20190709-3) ...
+Processing triggers for libc-bin (2.31-0ubuntu9.1) ...
+Removing intermediate container df1d187fd1ee
+ ---> df7b1d8e6cce
+Successfully built df7b1d8e6cce
+Successfully tagged imagen_python:v1
+```
+
+Y como vemos, los primeros pasos se los ahorra porque ya los ha hecho, vemos que pone *Using cache* y lo que se descarga e instala es lo relativo al último comando `RUN`, que es lo nuevo.
+
+Y si comprobamos las imágenes que tenemos
+
+```console
+docker images
+
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+imagen_python       v1                  df7b1d8e6cce        5 minutes ago       239MB
+imagen_python       latest              119a9b423ed3        9 hours ago         135MB
+mi_ubuntu           latest              630ed8ded791        24 hours ago        115MB
+ubuntu              latest              d70eaf7277ea        2 weeks ago         72.9MB
+```
+
+Vemos que tengo al imagen *imagen_python:latest* y la *imagen_python:v1*. Esta última la puedo convertir luego en *latest* renombrando el tag.
+
+Por último vamos a crear un contenedor a partir de esa imagen
+
+```console
+$ sudo docker run -it --rm imagen_python:v1 bash
+
+root@777a97a73058:/# 
+```
+
+Y vamos a comprobar que tenemos disponible todo lo que le hemos indicado en el *Dockerfile*
+
+- si hacemos cat /etc/version, muestra 1.0
+- podemos usar git, y vemos que lo tiene
+- podemos usar ping, y vemos que también lo tiene
+
+Entonces, recapitulando, hemos visto cómo a través de un fichero *Dockerfile* podemos añadir distintos elementos y que a partir de esa imagen creada, todos los contenedores que creemos a partir de ella van a tener disponible todas esas características.
