@@ -52,6 +52,7 @@
   - [5.2 Modificar un contenedor](#5.2-Modificar-un-contenedor)
   - [5.3 Docker commit. Crear una imagen manualmente](#5.3-Docker-commit.-Crear-una-imagen-manualmente)
   - [5.4 Dockerfile](#5.4-Dockerfile)
+  - [5.5 Crear una imagen de un Dockerfile](##-5.5-Crear-una-imagen-de-un-Dockerfile)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -4879,4 +4880,279 @@ Si nos vamos a la documentación oficial, la sección referente a [Dockerfile re
 
 Al final de la lista vemos  [Dockerfile examples](https://docs.docker.com/engine/reference/builder/#dockerfile-examples), que me muestra unos ejemplos de ficheros *Dockerfile*.
 
-Ya las iremos viendo.
+Ya iremos viendo esas directivas.
+
+## 5.5 Crear una imagen de un Dockerfile
+
+Vamos a construir nuestra primera imagen a partir de un *Dockerfile*.
+
+De momento va a ser muy simple y conforme vayamos viendo directivas a lo largo de esta sección, vamos a ir haciéndolo más complejo. Lo importante aquí es ver cómmo se construye una imagen a partir de un *Dockerfile*.
+
+Como ejemplo, vamos a crear una imagen que parta de la imagen ubuntu y que cree un entorno para instalar python
+
+Lo primero es crear un directorio donde trabajar
+
+```console
+$ mkdir imagen_python
+
+$ cd image_python
+```
+
+Y dentro crear un fichero llamado *Dockerfile*. Tiene que llamarse así.
+
+```console
+$ vim Dockerfile
+```
+
+El primer comando que suele tener una imagen es el comando `FROM`, que es la imagen padre, que es la imagen base a la que le vamos a ir añadiendo capas para construir nuestra imagen.
+
+Hay una excepción, que es `FROM scratch`, que es una imagen muy ligera, básicamente casi inexistente, que tiene Docker y que me permite crear comandos sin que tenga un sistema, sólo utilizando las librerías del host que tiene por debajo.
+
+Como nosotros vamos a crearlo a partir de una imagen de `ubuntu`
+
+```Dockerfile
+FROM ubuntu
+```
+
+Luego voy a poner el comando `RUN`, que contiene un comando que yo quiero ejecutar.
+
+```Dockerfile
+FROM ubuntu
+RUN apt-get update
+RUN apt-get install -y python
+```
+
+Es muy importante fijarse que en el `apt-get install` se ha indicado `-y` (`--yes`), y esto es porque como la imagen se construye de manera automática a partir de las instrucciones que yo le especifico, pues no puede haber ningún comando interactivo, y como el comando `apt-get install` pide confirmación, pues al pedir confirmación, la creación de la imagen fallaría, por eso no puede haber ningún comando interactivo, todos tienen que ser automáticos.
+
+Entonces el Dockerfile quedaría así. Consiste en crear una imagen a partir de la imagen de `ubuntu` y ejecuta dos comandos, actualiza los repositorios e instala python
+
+Y con eso de momento nos vale, así que guardamos y salimos.
+
+Otra cosa importante es que hay que utilizar el comando `apt-get` en vez de `apt`, porque *apt is for the terminal and gives beautiful output while apt-get and apt-cache are for scripts and give stable, parseable output*.
+
+Si ponemos `apt` nos dará un warning.
+
+```
+WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
+```
+
+Por eso debemos utilizar `apt-get` en vez de `apt`.
+
+Si quisiéramos crear una imagen de windows, en vez de `FROM ubuntu`, por ejemplo, habría que poner `FROM nmicrosoft/nanoserver` y poner los comandos como en *CMD* de Windows. Ejemplo:
+
+```Dockerfile
+FROM microsoft/nanoserver
+COPY testfile.txt c:\\
+RUN dir c:\
+```
+
+Para construir la imagen se utiliza el comando `docker build`. Y para construir la imagen, *docker build* va a coger la información que hay en el fichero *Dockerfile*.
+
+Con la opción `-t` le indico el nombre de la imagen, y opcionalmente, le puedo indicar el tag, sino utilizará *latest* por defecto
+
+Y también tengo que indicarle el *contexto*, que es el directorio donde está el Dockerfile y todos los ficheros que necesita para crear la imagen. Por ejemplo, si quiero poner algún fichero adicional o quiero copiar algo, debe estar dentro del contexto. El contexto puede ser un . (punto, que indica el directorio actual), un path o una URL.
+
+```console
+$ sudo docker build -t imagen_python .
+
+Sending build context to Docker daemon  2.048kB
+Step 1/3 : FROM ubuntu
+ ---> d70eaf7277ea
+Step 2/3 : RUN apt-get update
+ ---> Running in 4e272e62b76f
+Get:1 http://security.ubuntu.com/ubuntu focal-security InRelease [107 kB]
+Get:2 http://archive.ubuntu.com/ubuntu focal InRelease [265 kB]
+Get:3 http://security.ubuntu.com/ubuntu focal-security/multiverse amd64 Packages [1170 B]
+Get:4 http://archive.ubuntu.com/ubuntu focal-updates InRelease [111 kB]
+Get:5 http://security.ubuntu.com/ubuntu focal-security/restricted amd64 Packages [85.3 kB]
+Get:6 http://archive.ubuntu.com/ubuntu focal-backports InRelease [98.3 kB]
+Get:7 http://security.ubuntu.com/ubuntu focal-security/universe amd64 Packages [639 kB]
+Get:8 http://archive.ubuntu.com/ubuntu focal/main amd64 Packages [1275 kB]
+Get:9 http://security.ubuntu.com/ubuntu focal-security/main amd64 Packages [442 kB]
+Get:10 http://archive.ubuntu.com/ubuntu focal/multiverse amd64 Packages [177 kB]
+Get:11 http://archive.ubuntu.com/ubuntu focal/restricted amd64 Packages [33.4 kB]
+Get:12 http://archive.ubuntu.com/ubuntu focal/universe amd64 Packages [11.3 MB]
+Get:13 http://archive.ubuntu.com/ubuntu focal-updates/main amd64 Packages [810 kB]
+Get:14 http://archive.ubuntu.com/ubuntu focal-updates/restricted amd64 Packages [107 kB]
+Get:15 http://archive.ubuntu.com/ubuntu focal-updates/universe amd64 Packages [857 kB]
+Get:16 http://archive.ubuntu.com/ubuntu focal-updates/multiverse amd64 Packages [22.2 kB]
+Get:17 http://archive.ubuntu.com/ubuntu focal-backports/universe amd64 Packages [4277 B]
+Fetched 16.4 MB in 3s (6311 kB/s)
+Reading package lists...
+Removing intermediate container 4e272e62b76f
+ ---> 6e3128ffb1ed
+Step 3/3 : RUN apt-get install -y python
+ ---> Running in c3ad2f5217ca
+Reading package lists...
+Building dependency tree...
+Reading state information...
+The following additional packages will be installed:
+  file libexpat1 libmagic-mgc libmagic1 libpython2-stdlib libpython2.7-minimal
+  libpython2.7-stdlib libreadline8 libsqlite3-0 libssl1.1 mime-support python2
+  python2-minimal python2.7 python2.7-minimal readline-common xz-utils
+Suggested packages:
+  python2-doc python-tk python2.7-doc binutils binfmt-support readline-doc
+The following NEW packages will be installed:
+  file libexpat1 libmagic-mgc libmagic1 libpython2-stdlib libpython2.7-minimal
+  libpython2.7-stdlib libreadline8 libsqlite3-0 libssl1.1 mime-support
+  python-is-python2 python2 python2-minimal python2.7 python2.7-minimal
+  readline-common xz-utils
+0 upgraded, 18 newly installed, 0 to remove and 4 not upgraded.
+Need to get 6358 kB of archives.
+After this operation, 29.5 MB of additional disk space will be used.
+Get:1 http://archive.ubuntu.com/ubuntu focal-updates/universe amd64 libpython2.7-minimal amd64 2.7.18-1~20.04 [335 kB]
+Get:2 http://archive.ubuntu.com/ubuntu focal-updates/universe amd64 python2.7-minimal amd64 2.7.18-1~20.04 [1270 kB]
+Get:3 http://archive.ubuntu.com/ubuntu focal/universe amd64 python2-minimal amd64 2.7.17-2ubuntu4 [27.5 kB]
+Get:4 http://archive.ubuntu.com/ubuntu focal/main amd64 libssl1.1 amd64 1.1.1f-1ubuntu2 [1318 kB]
+Get:5 http://archive.ubuntu.com/ubuntu focal/main amd64 mime-support all 3.64ubuntu1 [30.6 kB]
+Get:6 http://archive.ubuntu.com/ubuntu focal/main amd64 libexpat1 amd64 2.2.9-1build1 [73.3 kB]
+Get:7 http://archive.ubuntu.com/ubuntu focal/main amd64 readline-common all 8.0-4 [53.5 kB]
+Get:8 http://archive.ubuntu.com/ubuntu focal/main amd64 libreadline8 amd64 8.0-4 [131 kB]
+Get:9 http://archive.ubuntu.com/ubuntu focal-updates/main amd64 libsqlite3-0 amd64 3.31.1-4ubuntu0.2 [549 kB]
+Get:10 http://archive.ubuntu.com/ubuntu focal-updates/universe amd64 libpython2.7-stdlib amd64 2.7.18-1~20.04 [1886 kB]
+Get:11 http://archive.ubuntu.com/ubuntu focal-updates/universe amd64 python2.7 amd64 2.7.18-1~20.04 [248 kB]
+Get:12 http://archive.ubuntu.com/ubuntu focal/universe amd64 libpython2-stdlib amd64 2.7.17-2ubuntu4 [7072 B]
+Get:13 http://archive.ubuntu.com/ubuntu focal/universe amd64 python2 amd64 2.7.17-2ubuntu4 [26.5 kB]
+Get:14 http://archive.ubuntu.com/ubuntu focal/main amd64 libmagic-mgc amd64 1:5.38-4 [218 kB]
+Get:15 http://archive.ubuntu.com/ubuntu focal/main amd64 libmagic1 amd64 1:5.38-4 [75.9 kB]
+Get:16 http://archive.ubuntu.com/ubuntu focal/main amd64 file amd64 1:5.38-4 [23.3 kB]
+Get:17 http://archive.ubuntu.com/ubuntu focal-updates/main amd64 xz-utils amd64 5.2.4-1ubuntu1 [82.5 kB]
+Get:18 http://archive.ubuntu.com/ubuntu focal/universe amd64 python-is-python2 all 2.7.17-4 [2496 B]
+debconf: delaying package configuration, since apt-utils is not installed
+Fetched 6358 kB in 1s (5782 kB/s)
+Selecting previously unselected package libpython2.7-minimal:amd64.
+(Reading database ... 4121 files and directories currently installed.)
+Preparing to unpack .../00-libpython2.7-minimal_2.7.18-1~20.04_amd64.deb ...
+Unpacking libpython2.7-minimal:amd64 (2.7.18-1~20.04) ...
+Selecting previously unselected package python2.7-minimal.
+Preparing to unpack .../01-python2.7-minimal_2.7.18-1~20.04_amd64.deb ...
+Unpacking python2.7-minimal (2.7.18-1~20.04) ...
+Selecting previously unselected package python2-minimal.
+Preparing to unpack .../02-python2-minimal_2.7.17-2ubuntu4_amd64.deb ...
+Unpacking python2-minimal (2.7.17-2ubuntu4) ...
+Selecting previously unselected package libssl1.1:amd64.
+Preparing to unpack .../03-libssl1.1_1.1.1f-1ubuntu2_amd64.deb ...
+Unpacking libssl1.1:amd64 (1.1.1f-1ubuntu2) ...
+Selecting previously unselected package mime-support.
+Preparing to unpack .../04-mime-support_3.64ubuntu1_all.deb ...
+Unpacking mime-support (3.64ubuntu1) ...
+Selecting previously unselected package libexpat1:amd64.
+Preparing to unpack .../05-libexpat1_2.2.9-1build1_amd64.deb ...
+Unpacking libexpat1:amd64 (2.2.9-1build1) ...
+Selecting previously unselected package readline-common.
+Preparing to unpack .../06-readline-common_8.0-4_all.deb ...
+Unpacking readline-common (8.0-4) ...
+Selecting previously unselected package libreadline8:amd64.
+Preparing to unpack .../07-libreadline8_8.0-4_amd64.deb ...
+Unpacking libreadline8:amd64 (8.0-4) ...
+Selecting previously unselected package libsqlite3-0:amd64.
+Preparing to unpack .../08-libsqlite3-0_3.31.1-4ubuntu0.2_amd64.deb ...
+Unpacking libsqlite3-0:amd64 (3.31.1-4ubuntu0.2) ...
+Selecting previously unselected package libpython2.7-stdlib:amd64.
+Preparing to unpack .../09-libpython2.7-stdlib_2.7.18-1~20.04_amd64.deb ...
+Unpacking libpython2.7-stdlib:amd64 (2.7.18-1~20.04) ...
+Selecting previously unselected package python2.7.
+Preparing to unpack .../10-python2.7_2.7.18-1~20.04_amd64.deb ...
+Unpacking python2.7 (2.7.18-1~20.04) ...
+Selecting previously unselected package libpython2-stdlib:amd64.
+Preparing to unpack .../11-libpython2-stdlib_2.7.17-2ubuntu4_amd64.deb ...
+Unpacking libpython2-stdlib:amd64 (2.7.17-2ubuntu4) ...
+Setting up libpython2.7-minimal:amd64 (2.7.18-1~20.04) ...
+Setting up python2.7-minimal (2.7.18-1~20.04) ...
+Linking and byte-compiling packages for runtime python2.7...
+Setting up python2-minimal (2.7.17-2ubuntu4) ...
+Selecting previously unselected package python2.
+(Reading database ... 4943 files and directories currently installed.)
+Preparing to unpack .../0-python2_2.7.17-2ubuntu4_amd64.deb ...
+Unpacking python2 (2.7.17-2ubuntu4) ...
+Selecting previously unselected package libmagic-mgc.
+Preparing to unpack .../1-libmagic-mgc_1%3a5.38-4_amd64.deb ...
+Unpacking libmagic-mgc (1:5.38-4) ...
+Selecting previously unselected package libmagic1:amd64.
+Preparing to unpack .../2-libmagic1_1%3a5.38-4_amd64.deb ...
+Unpacking libmagic1:amd64 (1:5.38-4) ...
+Selecting previously unselected package file.
+Preparing to unpack .../3-file_1%3a5.38-4_amd64.deb ...
+Unpacking file (1:5.38-4) ...
+Selecting previously unselected package xz-utils.
+Preparing to unpack .../4-xz-utils_5.2.4-1ubuntu1_amd64.deb ...
+Unpacking xz-utils (5.2.4-1ubuntu1) ...
+Selecting previously unselected package python-is-python2.
+Preparing to unpack .../5-python-is-python2_2.7.17-4_all.deb ...
+Unpacking python-is-python2 (2.7.17-4) ...
+Setting up libexpat1:amd64 (2.2.9-1build1) ...
+Setting up mime-support (3.64ubuntu1) ...
+Setting up libmagic-mgc (1:5.38-4) ...
+Setting up libssl1.1:amd64 (1.1.1f-1ubuntu2) ...
+debconf: unable to initialize frontend: Dialog
+debconf: (TERM is not set, so the dialog frontend is not usable.)
+debconf: falling back to frontend: Readline
+debconf: unable to initialize frontend: Readline
+debconf: (Can't locate Term/ReadLine.pm in @INC (you may need to install the Term::ReadLine module) (@INC contains: /etc/perl /usr/local/lib/x86_64-linux-gnu/perl/5.30.0 /usr/local/share/perl/5.30.0 /usr/lib/x86_64-linux-gnu/perl5/5.30 /usr/share/perl5 /usr/lib/x86_64-linux-gnu/perl/5.30 /usr/share/perl/5.30 /usr/local/lib/site_perl /usr/lib/x86_64-linux-gnu/perl-base) at /usr/share/perl5/Debconf/FrontEnd/Readline.pm line 7.)
+debconf: falling back to frontend: Teletype
+Setting up libsqlite3-0:amd64 (3.31.1-4ubuntu0.2) ...
+Setting up libmagic1:amd64 (1:5.38-4) ...
+Setting up file (1:5.38-4) ...
+Setting up xz-utils (5.2.4-1ubuntu1) ...
+update-alternatives: using /usr/bin/xz to provide /usr/bin/lzma (lzma) in auto mode
+update-alternatives: warning: skip creation of /usr/share/man/man1/lzma.1.gz because associated file /usr/share/man/man1/xz.1.gz (of link group lzma) doesn't exist
+update-alternatives: warning: skip creation of /usr/share/man/man1/unlzma.1.gz because associated file /usr/share/man/man1/unxz.1.gz (of link group lzma) doesn't exist
+update-alternatives: warning: skip creation of /usr/share/man/man1/lzcat.1.gz because associated file /usr/share/man/man1/xzcat.1.gz (of link group lzma) doesn't exist
+update-alternatives: warning: skip creation of /usr/share/man/man1/lzmore.1.gz because associated file /usr/share/man/man1/xzmore.1.gz (of link group lzma) doesn't exist
+update-alternatives: warning: skip creation of /usr/share/man/man1/lzless.1.gz because associated file /usr/share/man/man1/xzless.1.gz (of link group lzma) doesn't exist
+update-alternatives: warning: skip creation of /usr/share/man/man1/lzdiff.1.gz because associated file /usr/share/man/man1/xzdiff.1.gz (of link group lzma) doesn't exist
+update-alternatives: warning: skip creation of /usr/share/man/man1/lzcmp.1.gz because associated file /usr/share/man/man1/xzcmp.1.gz (of link group lzma) doesn't exist
+update-alternatives: warning: skip creation of /usr/share/man/man1/lzgrep.1.gz because associated file /usr/share/man/man1/xzgrep.1.gz (of link group lzma) doesn't exist
+update-alternatives: warning: skip creation of /usr/share/man/man1/lzegrep.1.gz because associated file /usr/share/man/man1/xzegrep.1.gz (of link group lzma) doesn't exist
+update-alternatives: warning: skip creation of /usr/share/man/man1/lzfgrep.1.gz because associated file /usr/share/man/man1/xzfgrep.1.gz (of link group lzma) doesn't exist
+Setting up readline-common (8.0-4) ...
+Setting up libreadline8:amd64 (8.0-4) ...
+Setting up libpython2.7-stdlib:amd64 (2.7.18-1~20.04) ...
+Setting up python2.7 (2.7.18-1~20.04) ...
+Setting up libpython2-stdlib:amd64 (2.7.17-2ubuntu4) ...
+Setting up python2 (2.7.17-2ubuntu4) ...
+Setting up python-is-python2 (2.7.17-4) ...
+Processing triggers for libc-bin (2.31-0ubuntu9.1) ...
+Removing intermediate container c3ad2f5217ca
+ ---> 119a9b423ed3
+Successfully built 119a9b423ed3
+Successfully tagged imagen_python:latest
+```
+
+Vamos a analizar la salida del comando `docker build`. Ve que va a ir creando los distintos pasos del *Dockerfile*, que serán las distintas capas de la imagen.
+
+- El primer paso, `FROM ubuntu`, en teoría debería ir a *Docker Hub* y descargarla, pero como ya tenemos la imagen descargada en local, pues lo que hace es cogerla, no hace nada más. A este paso o capa de la imagen le asigan el ID *d70eaf7277ea*
+
+- El segundo paso, `RUN apt-get update`, fijarse que lo que hace es que crea un contenedor temporal, el *4e272e62b76f* para construir el apt-get update (como el que hicimos a mano, con el commit) y cuando termina, elimina el contenedor temporal y añade la nueva capa a la imagen con el ID *6e3128ffb1ed*.
+
+- En el último paso, `RUN apt-get install -y python`, hace lo mismo, me crea un contenedor temporal, el *c3ad2f5217ca*, y empieza la instalación y cuando termina, elimina el contenedor temporal y creará una nueva imagen o elemento de repositorio llamada imagen_python y con la etiqueta latest al que le ha puesto el ID *119a9b423ed3*.
+
+> **Nota:** Han salido varios errores al crear la imagen. Sería conveniente solucionarlos, pero como lo que queremos es ver cómo crear una imagen de manera automática a través de un fichero *Dockerfile*, pues no los vamos a arreglar.
+
+Si miramos dentro de la carpeta del *Dockerfile* vemos que no hay nada aparte del fichero *Dockerfile*, pero si listamos las imágenes vemos que sí aparece la imagen que acabamos de construir.
+
+```console
+$ sudo docker images
+
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+imagen_python       latest              119a9b423ed3        17 minutes ago      135MB
+mi_ubuntu           latest              630ed8ded791        15 hours ago        115MB
+ubuntu              latest              d70eaf7277ea        2 weeks ago         72.9MB
+```
+
+Entonces el último paso sería subirla a *Docker Hub*, aunque no lo vamos a hacer ahora, además, tendríamos que cambiarle el nombre, porque en *Docker Hub* no permite nombres de imágenes así, salvo que se trate de un repositorio oficial.
+
+Vamos a hacer la prueba, vamos a crear un contenedor interactivo a partir de nuestra nueva imagen y vamos ejecutar python
+
+```console
+$ sudo docker run -it imagen_python python
+
+Python 2.7.18 (default, Aug  4 2020, 11:16:42) 
+[GCC 9.3.0] on linux2
+Type "help", "copyright", "credits" or "license" for more information.
+>>> 
+```
+
+Vemos que me ha arrancado este contenedor y me ha ejecutado el script python
+
+Salimos con exit()
