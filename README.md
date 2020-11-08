@@ -5658,6 +5658,36 @@ d70eaf7277ea        2 weeks ago          /bin/sh -c #(nop)  CMD ["/bin/bash"]   
 
 Ahora podemos ver que ya me lo pone correctamente `CMD ["/bin/bash"]`.
 
+Por cierto, si tenemos un error durante la construcción de una imagen a través de un *Dockerfile*, y lo arreglamos y sigue dando el mismo fallo, probablemente haya que añadir `--no-cache` al construir la imagen.
+
+```console
+$ sudo docker image build --no-cache -t image:v1 .
+```
+
+Eso es porque:
+
+- Por defecto, Docker cachea los comandos para reducir el tiempo empleado en la construcción de imágenes. A menos que haya algún cambio antes de ese comando (o en la misma línea).
+- Las distribuciones Linux se actualizan regularmente, y requieren que ejecutes `apt-get update` frecuentemente, de otra manera `apt-get install` podría no funcionar como se esperaba.
+
+Entonces, si por ejemplo se ha creado una imagen anteriormente, con una distribución de Linux que recientemente tuvo algunas actualizaciones, y desea agregar algunas bibliotecas más, por ejemplo:
+
+```Dockerfile
+RUN apt-get update
+RUN apt-get install -y s3cmd postgresql wget build-essential descomprimir gawk
+```
+
+El comando `apt-get update` se omitirá ya que ya está almacenado en caché, la administración de su paquete, es decir, `apt-get`, no estaría actualizada mientras pensaba que siempre debería estarlo.
+
+A mí me daba el error:
+
+```console
+The command '/bin/sh -c apt-get install -y git' returned a non-zero code: 100
+```
+
+Y era que me había equivocado al escribir ese comando, y como el apt-update estaba antes, pues lo tenía cacheado y no se actualizaba.
+
+Y al construir la imagen con `--no-cache` se solucionó el problema
+
 ## 5.7 ENTRYPOINT
 
 La directiva `ENTRYPOINT`, al igual que `CMD`, lo que hace es ejecutar algo cuando arrancamos el contenedor.
