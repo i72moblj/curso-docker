@@ -55,6 +55,7 @@
   - [5.5 Crear una imagen de un Dockerfile](##-5.5-Crear-una-imagen-de-un-Dockerfile)
   - [5.6 RUN](##-5.6-RUN)
   - [5.7 CMD](##-5.7-CMD)
+  - [5.7 ENTRYPOINT](##-5.7-ENTRYPOINT)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -5656,3 +5657,248 @@ d70eaf7277ea        2 weeks ago          /bin/sh -c #(nop)  CMD ["/bin/bash"]   
 ```
 
 Ahora podemos ver que ya me lo pone correctamente `CMD ["/bin/bash"]`.
+
+## 5.7 ENTRYPOINT
+
+La directiva `ENTRYPOINT`, al igual que `CMD`, lo que hace es ejecutar algo cuando arrancamos el contenedor.
+
+La diferencia con `CMD` es que la directiva `ENTRYPOINT` nos permite blindar ese comando, es decir, que cuando arranque el contenedor se ejecute ese comando siempre, lo que con la directiva `CMD` no pasa siempre.
+
+Vamos a verlo.
+
+Si volvemos a nuestro Dockerfile
+
+```Dockerfile
+FROM ubuntu
+RUN apt-get update
+RUN apt-get install -y python
+RUN echo "1.0" >> /etc/version && apt-get install -y git \
+    && apt-get install -y iputils-ping
+CMD ["/bin/bash"]
+```
+
+La última directiva es `CMD` que hace una llamada a `/bin/bash`, por lo que, por defecto, cuando creo un contenedor interactivo, va a invocar a esta shell.
+
+Pero, nosotros podemos modificar ese comportamiento cuando invocamos al contenedor.
+
+Vamos a construir la misma imagen con otra versión
+
+```console
+$ sudo docker build -t image:v2 .
+
+Sending build context to Docker daemon  2.048kB
+Step 1/5 : FROM ubuntu
+ ---> d70eaf7277ea
+Step 2/5 : RUN apt-get update
+ ---> Using cache
+ ---> 5bbadd6ce34a
+Step 3/5 : RUN apt-get install -y python
+ ---> Using cache
+ ---> 9c39c75d3847
+Step 4/5 : RUN echo 1.0 >> /etc/version && apt-get install -y git     && apt-get install -y iputils-ping
+ ---> Using cache
+ ---> 68eee9a3eced
+Step 5/5 : CMD ["/bin/bash"]
+ ---> Using cache
+ ---> e6a5effa70cd
+Successfully built e6a5effa70cd
+Successfully tagged image:v2
+```
+
+Y vamos a crear un contenedor interactivo a partir de esa imagen
+
+```console
+$ sudo docker run -it --rm image:v2
+
+root@cee18205510d:/# 
+```
+
+Si lo pongo así, a secas, sin indicar el comando que quiero que se ejecute al arrancar el contenedor, la directiva `CMD` le dice que tiene que ejecutar la *bash*.
+
+Salimos y creamos otro contenedor de la misma imagen, pero esta vez sí que le vamos a indicar qué comando queremos que se ejecute cuando arranque, por ejemplo `ls`
+
+```console
+$ sudo docker run -it --rm image:v2 ls
+
+bin   dev  home  lib32	libx32	mnt  proc  run	 srv  tmp  var
+boot  etc  lib	 lib64	media	opt  root  sbin  sys  usr
+```
+
+Vemos que el contenedor ejecuta el comando y se sale.
+
+Entonces, podemos observar que si al crear un contenedor interactivo le indicamos el comando que quiero que se ejecute al arrancarlo, lo que estamos haciendo es sustituir el comando que originalmente pusimos en el `CMD`.
+
+Esto no pasa con la directiva `ENTRYPOINT`. Vamos a verlo.
+
+Editamos el *Dockerfile* y sustituimos `CMD` por `ENTRYPOINT`
+
+```Dockerfile
+FROM ubuntu
+RUN apt-get update
+RUN apt-get install -y python
+RUN echo "1.0" >> /etc/version && apt-get install -y git \
+    && apt-get install -y iputils-ping
+ENTRYPOINT ["/bin/bash"]
+```
+
+Y funciona exactamente igual, lo podemos poner entre corchetes en formato json o en modo shell, aunque es la manera recomendada es entre corchetes.
+
+Borramos la imagen anterior.
+
+```console
+$ sudo docker rmi image:v2
+
+Untagged: image:v2
+```
+
+Y la volvemos a construir
+
+```console
+$ sudo docker build -t image:v2 .
+
+Sending build context to Docker daemon  2.048kB
+Step 1/5 : FROM ubuntu
+ ---> d70eaf7277ea
+Step 2/5 : RUN apt-get update
+ ---> Using cache
+ ---> 5bbadd6ce34a
+Step 3/5 : RUN apt-get install -y python
+ ---> Using cache
+ ---> 9c39c75d3847
+Step 4/5 : RUN echo 1.0 >> /etc/version && apt-get install -y git     && apt-get install -y iputils-ping
+ ---> Using cache
+ ---> 68eee9a3eced
+Step 5/5 : ENTRYPOINT ["/bin/bash"]
+ ---> Running in de76d1d1dfd5
+Removing intermediate container de76d1d1dfd5
+ ---> 88896491d98c
+Successfully built 88896491d98c
+Successfully tagged image:v2
+```
+
+Si ahora creamos un contenedor sin especificar el comando inicial
+
+```console
+$ sudo docker run -it --rm image:v2
+
+root@c79929a77231:/# 
+```
+
+Vemos que en principio parece que funciona igual `ENTRYPOINT` que `CMD`, me entra en la *bash* y puedo trabajar.
+
+Pero si salimos y creamos un contenedor especificándole el comando que queremos que se ejecute al arrancar
+
+```console
+$ sudo docker run -it --rm image:v2 ls
+
+/usr/bin/ls: /usr/bin/ls: cannot execute binary file
+```
+
+Nos da error al crear el contenedor y nos dice que no puede ejecutar ese comando y eso es porque con `ENTRYPOINT` lo que hace es ejecutar siempre el comando que le hemos puesto.
+
+Y de hecho, si le indicamos un comando al crear un contenedor, lo va a tratar como un argumento adicional que lo añade al comando especificado en el `ENTRYPOINT`.
+
+Es decir, el comando no lo puedo modificar, pero si configuramos bien el *Dockerfile*, puedo modificar los argumentos que yo le paso.
+
+Esto nos permite hacer cosas bastante interesantes. Vamos a hacer un ejemplo
+
+Editamos el Dockerfile y en vez de `/bin/bash`, vamos a poner el comando `df`, que lista el *disk file*, espacio de los discos
+
+```console
+FROM ubuntu
+RUN apt-get update
+RUN apt-get install -y python
+RUN echo "1.0" >> /etc/version && apt-get install -y git \
+    && apt-get install -y iputils-ping
+ENTRYPOINT ["df"]
+```
+
+Borramos la imagen
+
+```console
+$ sudo docker rmi image:v2
+
+Untagged: image:v2
+Deleted: sha256:88896491d98c1066f2fb50eedf5e56bc96291fc6b3cde5b7ea87abaec69e81d5
+```
+
+Y la volvemos a crear
+
+```console
+$ sudo docker build -t image:v2 .
+
+Sending build context to Docker daemon  2.048kB
+Step 1/5 : FROM ubuntu
+ ---> d70eaf7277ea
+Step 2/5 : RUN apt-get update
+ ---> Using cache
+ ---> 5bbadd6ce34a
+Step 3/5 : RUN apt-get install -y python
+ ---> Using cache
+ ---> 9c39c75d3847
+Step 4/5 : RUN echo 1.0 >> /etc/version && apt-get install -y git     && apt-get install -y iputils-ping
+ ---> Using cache
+ ---> 68eee9a3eced
+Step 5/5 : ENTRYPOINT ["df"]
+ ---> Running in 87589a99b4ca
+Removing intermediate container 87589a99b4ca
+ ---> 54ec8e73192a
+Successfully built 54ec8e73192a
+Successfully tagged image:v2
+```
+
+Y ahora vamos a crear un contenedor sin indicar qué comando quiero ejecutar, pues coge el por defecto, que en este caso es df
+
+```console
+$ sudo docker run -it --rm image:v2
+
+Filesystem     1K-blocks      Used Available Use% Mounted on
+overlay        230230752 156461272  62004720  72% /
+tmpfs              65536         0     65536   0% /dev
+tmpfs            3932348         0   3932348   0% /sys/fs/cgroup
+shm                65536         0     65536   0% /dev/shm
+/dev/sda1      230230752 156461272  62004720  72% /etc/hosts
+tmpfs            3932348         0   3932348   0% /proc/asound
+tmpfs            3932348         0   3932348   0% /proc/acpi
+tmpfs            3932348         0   3932348   0% /sys/firmware
+```
+
+Por defecto ejecuta el comando df y sale.
+
+Ahora si le especifico al final `-h`, a secas, esto no es ningún comando, es un argumento del comando por defecto, por lo que lo añade posteriormente al comando por defecto
+
+```console
+$ sudo docker run -it --rm image:v2 -h
+
+Filesystem      Size  Used Avail Use% Mounted on
+overlay         220G  150G   60G  72% /
+tmpfs            64M     0   64M   0% /dev
+tmpfs           3.8G     0  3.8G   0% /sys/fs/cgroup
+shm              64M     0   64M   0% /dev/shm
+/dev/sda1       220G  150G   60G  72% /etc/hosts
+tmpfs           3.8G     0  3.8G   0% /proc/asound
+tmpfs           3.8G     0  3.8G   0% /proc/acpi
+tmpfs           3.8G     0  3.8G   0% /sys/firmware
+```
+
+Si por ejemplo quisiera sacar la ayuda, podría poner --help
+
+```console
+$ sudo docker run -it --rm image:v2 --help
+```
+
+Porque el contenedor ejecuta el comando `df` y al arrancar el contenedor le añade ese argumento.
+
+Y si yo intento añadir otra cosa
+
+```console
+$ sudo docker run -it --rm image:v2 ls
+
+df: ls: No such file or directory
+```
+
+Nos da error porque añade `ls` al comando `df` y como no existe esa opción me dice que no lo puede ejecutar.
+
+Resumiendo, tengo 2 tipos de directivas que me permiten ejecutar comandos al arrancar el contenedor, la primera, `CMD`, me permite iniciar el comando, pero lo puedo modificar, la segunda, `ENTRYPOINT`, hace lo mismo, pero siempre me obliga a poner ese comando.
+
+Al igual que con `CMD`, en el Dockerfile puedo tener todos los `ENTRYPOINT` que quiera, pero sólo se tendrá en cuenta el último.
