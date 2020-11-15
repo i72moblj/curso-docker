@@ -55,7 +55,8 @@
   - [5.5 Crear una imagen de un Dockerfile](##-5.5-Crear-una-imagen-de-un-Dockerfile)
   - [5.6 RUN](##-5.6-RUN)
   - [5.7 CMD](##-5.7-CMD)
-  - [5.7 ENTRYPOINT](##-5.7-ENTRYPOINT)
+  - [5.8 ENTRYPOINT](##-5.8-ENTRYPOINT)
+  - [5.9 WORKDIR](##-5.9-WORKDIR)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -5688,7 +5689,7 @@ Y era que me había equivocado al escribir ese comando, y como el apt-update est
 
 Y al construir la imagen con `--no-cache` se solucionó el problema
 
-## 5.7 ENTRYPOINT
+## 5.8 ENTRYPOINT
 
 La directiva `ENTRYPOINT`, al igual que `CMD`, lo que hace es ejecutar algo cuando arrancamos el contenedor.
 
@@ -5932,3 +5933,79 @@ Nos da error porque añade `ls` al comando `df` y como no existe esa opción me 
 Resumiendo, tengo 2 tipos de directivas que me permiten ejecutar comandos al arrancar el contenedor, la primera, `CMD`, me permite iniciar el comando, pero lo puedo modificar, la segunda, `ENTRYPOINT`, hace lo mismo, pero siempre me obliga a poner ese comando.
 
 Al igual que con `CMD`, en el Dockerfile puedo tener todos los `ENTRYPOINT` que quiera, pero sólo se tendrá en cuenta el último.
+
+## 5.9 WORKDIR
+
+La directiva WORKDIR nos permite determinar el directorio de trabajo para otras directivas, como son RUN, ENTRYPOINT, COPY, ADD, ... de tal forma que cuando lancemos cualquier tipo de comando, ese comando se ejecute, se realice bajo el ámbito de ese directorio de trabajo.
+
+Entonces, siguiendo con el ejemplo del Dockerfile
+
+```Dockerfile
+FROM ubuntu
+RUN apt-get update
+RUN apt-get install -y python
+RUN echo "1.0" >> /etc/version && apt-get install -y git \
+    && apt-get install -y iputils-ping
+RUN mkdir /datos
+WORKDIR /datos
+RUN touch f1.txt
+ENTRYPOINT ["/bin/bash"]
+```
+
+Lo que va a hacer es crear el directorio /datos, lo va a convertir en el directorio de trabajo y luego, con el comando `touch` va a crear un fichero vacío llamado f1.txt. Si nos fijamos, no se ha especificado el path, y lo va a crear en /datos, porque a partir de que se defina el directorio de trabajo `WORKDIR`, automáticamente va a crear el fichero en relación a ese directorio.
+
+Podemos tener varios `WORKDIR`, varios directorios de trabajo
+
+```Dockerfile
+FROM ubuntu
+RUN apt-get update
+RUN apt-get install -y python
+RUN echo "1.0" >> /etc/version && apt-get install -y git \
+    && apt-get install -y iputils-ping
+RUN mkdir /datos
+WORKDIR /datos
+RUN touch f1.txt
+WORKDIR /datos1
+RUN touch f2.txt
+ENTRYPOINT ["/bin/bash"]
+```
+
+Como vemos, son los mismos comandos y lo que hace es:
+
+1. crear el directorio,
+2. lo convierto en el directorio de trabajo
+3. y luego ejecuto algo sobre él.
+
+Entonces, los comandos RUN, CMD, ENTRYPOINT, ... van a hacer el trabajo en relación a donde se encuentren.
+
+Vamos a construir la imagen
+
+```console
+$ sudo docker build -t image:v3 .
+```
+
+Y vamos a crear un contenedor a partir de la imagen
+
+```console
+$ sudo docker run -it --rm image:v3
+
+root@27f74b52d513:/datos1# 
+```
+
+Lo primero que vemos es que se ha puesto directamente en el directorio */datos1*, que era el último `WORKDIR` que le habíamos indicado.
+
+Y podemos comprobar que los directorios existen y los ficheros también.
+
+```console
+root@27f74b52d513:/datos1# ls    
+f2.txt
+
+root@27f74b52d513:/datos1# ls ../datos
+f1.txt
+
+^root@27f74b52d513:/datos1# 
+```
+
+Entonces lo que nos permite WORKDIR es ir ejecutando comandos o creando componentes en determinados directorios sin tener que poner el path completo.
+
+Más adelante veremos cómo podemos utilizarla junto con otras directivas como ENV o COPY, lo que nos permite hacer cosas muy interesantes.
