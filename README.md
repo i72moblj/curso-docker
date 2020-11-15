@@ -57,6 +57,10 @@
   - [5.7 CMD](##-5.7-CMD)
   - [5.8 ENTRYPOINT](##-5.8-ENTRYPOINT)
   - [5.9 WORKDIR](##-5.9-WORKDIR)
+  - [5.10 COPY - ADD](##-5.10-COPY---ADD)
+    - [COPY](###-COPY)
+    - [Comentarios](###-Comentarios)
+    - [ADD](###-ADD)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -6006,6 +6010,207 @@ f1.txt
 ^root@27f74b52d513:/datos1# 
 ```
 
-Entonces lo que nos permite WORKDIR es ir ejecutando comandos o creando componentes en determinados directorios sin tener que poner el path completo.
+Entonces lo que nos permite `WORKDIR` es ir ejecutando comandos o creando componentes en determinados directorios sin tener que poner el path completo.
 
 Más adelante veremos cómo podemos utilizarla junto con otras directivas como ENV o COPY, lo que nos permite hacer cosas muy interesantes.
+
+## 5.10 COPY - ADD
+
+Vamos a ver dos directivas, que van a ser `COPY` y `ADD`. Las dos hacen cosas parecidas, aunque tienen algunas diferencias, que es copiar contenido de la máquina principal, la máquina host, a algún directorio del contenedor.
+
+### COPY
+
+Vamos a ver un ejemplo siguiendo con nuestro Dockerfile
+
+```Dockerfile
+FROM ubuntu
+RUN apt-get update
+RUN apt-get install -y python
+RUN echo "1.0" >> /etc/version && apt-get install -y git \
+    && apt-get install -y iputils-ping
+
+##WORKDIR##
+RUN mkdir /datos
+WORKDIR /datos
+RUN touch f1.txt
+RUN mkdir /datos1
+WORKDIR /datos1
+RUN touch f2.txt
+
+##COPY##
+COPY index.html .
+COPY app.log /datos
+
+##ENTRYPOINT##
+ENTRYPOINT ["/bin/bash"]
+```
+
+La primera directiva `COPY` que aparece, copia el archivo *index.html* al directorio actual, `.` (punto), del contenedor, que es el directorio de trabajo del último `WORKDIR`.
+
+La segunda directiva `COPY` sí especifica la ruta porque quiere copiar el archivo a otra ubicación que no es la del directorio de trabajo actual.
+
+Siempre que utilizamos la directiva `COPY`, cualquier referencia a cualquier archivo hace referencia al *directorio de contexto*, que es el directorio en el que se encuentra el archivo Dockerfile, por lo que los archivos que queremos copiar deben estar en el mismo directorio del Dockerfile.
+
+```console
+$ ls -l
+
+total 4
+-rw-r--r-- 1 jesus jesus   0 nov 15 20:56 app.log
+-rw-r--r-- 1 jesus jesus 361 nov 15 20:50 Dockerfile
+-rw-r--r-- 1 jesus jesus   0 nov 15 20:56 index.html
+```
+
+Vamos a crear la imagen
+
+```console
+$ sudo docker build -t image:v4 .
+```
+
+El último `.` del comando docker build hace referencia al *directorio de contexto*, que es en el que está el Dockerfile
+
+Vamos a crear un contenedor a partir de esa imagen
+
+```console
+$ sudo docker run -it --rm image:v4
+
+root@31021e4d0ce2:/datos1# 
+```
+
+Podemos ver que esos fichero existen dentro del contenedor.
+
+```console
+root@31021e4d0ce2:/datos1# ls
+f2.txt  index.html
+
+root@31021e4d0ce2:/datos1# ls /datos
+app.log  f1.txt
+
+root@31021e4d0ce2:/datos1# 
+```
+
+Vemos que al acabar se coloca en el directorio */datos1*, porque así lo indica el último `WORKDIR` y dentro tengo el archivo *index.html*, que lo copiábamos en el directorio actual y que dentro del directorio */datos* tenemos el archivo *app.log* que le indicamos que lo copiara ahí mediante su ruta absoluta.
+
+### Comentarios
+
+Podemos añadir comentarios al fichero Dockerfile añadiendo # al principio de una línea
+
+### ADD
+
+El comando `ADD`, si miramos la documentación oficial, genera un poco de confusión, porque dice que hace lo mismo que `COPY`, que copia, que lleva, ficheros o directorios al contenedor.
+
+Tengo el siguiente contenido en el directorio de contexto
+
+```console
+$ ls -l
+
+total 40
+-rw-r--r-- 1 jesus jesus     0 nov 15 20:56 app.log
+-rw-r--r-- 1 jesus jesus   375 nov 15 20:59 Dockerfile
+drwxr-xr-x 2 jesus jesus  4096 nov 15 21:13 docs
+-rw-r--r-- 1 jesus jesus 10240 nov 15 21:22 f1
+-rw-r--r-- 1 jesus jesus     0 nov 15 21:18 f2
+-rw-r--r-- 1 jesus jesus     0 nov 15 21:18 f3
+-rw-r--r-- 1 jesus jesus     0 nov 15 21:18 f4
+-rw-r--r-- 1 jesus jesus     0 nov 15 21:18 f5
+-rw-r--r-- 1 jesus jesus 20480 nov 15 21:22 f.tar
+-rw-r--r-- 1 jesus jesus     0 nov 15 20:56 index.html
+
+$ ls -l docs/
+
+total 0
+-rw-r--r-- 1 jesus jesus 0 nov 15 21:13 f6
+```
+
+Nuestro fichero *f.tar* empaqueta los ficheros *f1*, *f2*, *f3*, *f4* y *f5*.
+
+Y el fichero Dockerfile
+
+```Dockerfile
+FROM ubuntu
+RUN apt-get update
+RUN apt-get install -y python
+RUN echo "1.0" >> /etc/version && apt-get install -y git \
+    && apt-get install -y iputils-ping
+
+##WORKDIR##
+RUN mkdir /datos
+WORKDIR /datos
+RUN touch f1.txt
+RUN mkdir /datos1
+WORKDIR /datos1
+RUN touch f2.txt
+
+##COPY##
+COPY index.html .
+COPY app.log /datos
+
+##ADD##
+ADD docs docs
+ADD f* /datos/
+ADD f.tar .
+
+##ENTRYPOINT##
+ENTRYPOINT ["/bin/bash"]
+```
+
+La primera directiva `ADD` lo que hace es copiar el directorio *docs* de la máquina local al contenedor. ¿Y en qué directorio? En el directorio */datos1*, que es el que se indica en la última directiva `WORKDIR`.
+
+Recordar que siempre que se trabaje con rutas relativas, hacen referencia al directorio de trabajo, al `WORKDIR`, de otra forma hay que indicar el path completo, la ruta absoluta.
+
+Si el directorio no existe en el contenedor, lo crea.
+
+La segunda directiva `ADD` copia todos los archivos que empiezan por f, del *f1* al *f5*, al directorio */datos*. En este caso el path es absoluto.
+
+Vemos que se pueden utilizar metacaracteres, como el `*` (comodín). Esto también es para la directiva `COPY`.
+
+Y la tercera directiva `ADD` hace un ADD del archivo f.tar al directorio de trabajo actual, es decir, a */datos1*.
+
+Una de las diferencias básicas entre las directivas `COPY` y `ADD`, es que con `ADD` podemos llevar al contenedor un fichero `.tar`, que es un fichero que permite empaquetar otros ficheros.
+
+Y podemos pensar, bueno, es un fichero normal, pero no, porque lo que hace Docker es que lo desempaqueta.
+
+Otra opción de la directiva `ADD` con respecto a `COPY` es que nos permite traernos algo de una *URL*, por ejemplo, un fichero u otro contenido que tengamos en internet.
+
+Bueno, pues vamos a probarlo, vamos a crear la imagen
+
+```console
+$ sudo docker build -t image:v5 .
+```
+Vamos a crear el contenedor para ver lo que ha hecho
+
+```console
+$ sudo docker run -it --rm image:v5
+
+root@3647a43374de:/datos1# ls -l
+total 16
+drwxr-xr-x 2 root root  4096 Nov 15 20:40 docs
+-rw-r--r-- 1 1000 1001 10240 Nov 15 20:22 f1
+-rw-r--r-- 1 1000 1001     0 Nov 15 20:18 f2
+-rw-r--r-- 1 root root     0 Nov 15 20:40 f2.txt
+-rw-r--r-- 1 1000 1001     0 Nov 15 20:18 f3
+-rw-r--r-- 1 1000 1001     0 Nov 15 20:18 f4
+-rw-r--r-- 1 1000 1001     0 Nov 15 20:18 f5
+-rw-r--r-- 1 root root     0 Nov 15 19:56 index.html
+
+root@3647a43374de:/datos1# # ls -l docs/
+total 0
+-rw-r--r-- 1 root root 0 Nov 15 20:13 f6
+
+root@3647a43374de:/datos1# ls -l /datos
+total 12
+-rw-r--r-- 1 root root     0 Nov 15 19:56 app.log
+-rw-r--r-- 1 1000 1001 10240 Nov 15 20:22 f1
+-rw-r--r-- 1 root root     0 Nov 15 20:40 f1.txt
+-rw-r--r-- 1 root root     0 Nov 15 20:18 f2
+-rw-r--r-- 1 root root     0 Nov 15 20:18 f3
+-rw-r--r-- 1 root root     0 Nov 15 20:18 f4
+-rw-r--r-- 1 root root     0 Nov 15 20:18 f5
+
+root@3647a43374de:/datos1# 
+```
+
+Podemos comprobar que están todos los ficheros y directorios que le hemos añadido o copiado.
+
+Y además, podemos observar que en el directorio */datos1* no tenemos el fichero *f.tar*, sino que lo que ha hecho ha sido desempaquetar los ficheros *f1*, *f2*, *f3*, *f4* y *f5* en el directorio de trabajo actual.
+
+Como resumen, las directivas `COPY` y `ADD`, son dos directivas muy interesantes porque nos permiten pasar componentes, ficheros, que tengo dentro de nuestra máquina local al contenedor.
