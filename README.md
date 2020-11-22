@@ -61,6 +61,7 @@
     - [COPY](###-COPY)
     - [Comentarios](###-Comentarios)
     - [ADD](###-ADD)
+  - [5.11 ENV](##-5.11-ENV)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -6214,3 +6215,190 @@ Podemos comprobar que están todos los ficheros y directorios que le hemos añad
 Y además, podemos observar que en el directorio */datos1* no tenemos el fichero *f.tar*, sino que lo que ha hecho ha sido desempaquetar los ficheros *f1*, *f2*, *f3*, *f4* y *f5* en el directorio de trabajo actual.
 
 Como resumen, las directivas `COPY` y `ADD`, son dos directivas muy interesantes porque nos permiten pasar componentes, ficheros, que tengo dentro de nuestra máquina local al contenedor.
+
+## 5.11 ENV
+
+Vamos a ver cómo podemos utilizar variables dentro de nuestras imágenes y contenedores.
+
+De hecho, una de las aplicaciones más directas es la de pasar una variable cuando creamos un contenedor.
+
+Vamos a crear un contenedor
+
+```console
+$ sudo docker run -it --rm image:v4
+ 
+root@f517c16bd2f6:/datos1#
+```
+
+Si dentro del contenedor ejecuto el comando `env`, me devuelve las variables de entorno.
+
+```console
+root@f517c16bd2f6:/datos1# env
+
+HOSTNAME=f517c16bd2f6
+PWD=/datos1
+HOME=/root
+LS_COLORS=rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:
+LESSCLOSE=/usr/bin/lesspipe %s %s
+TERM=xterm
+LESSOPEN=| /usr/bin/lesspipe %s
+SHLVL=1
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+_=/usr/bin/env
+```
+
+Por ejemplo, si queremos saber el valor de la variable *HOME*
+
+```console
+root@f517c16bd2f6:/datos1# echo $HOME
+
+/root
+```
+
+Salimos del contenedor.
+
+Una de las opciones más sencillas y más directas es utilizar una variable cuando lanzamos un contenedor con la opción `-e` o `--env` seguido de la variable y el valor
+
+```console
+$ sudo docker run -it --rm --env x=10 image:v4
+
+root@63983ef6f247:/datos1# 
+```
+
+Esto lo que va a hacer es que, cuando arrancamos el contenedor, crea la variable *x* dentro del environment.
+
+Y podemos verla
+
+```console
+root@63983ef6f247:/datos1# echo $x
+
+10
+```
+
+Por lo tanto puedo crear una variable y pasarla directamente cuando creo el contenedor.
+
+Pero esto no es muy útil a no ser que yo sepa que el contenedor necesita o hace referencia a una variable *x*.
+
+Pero se pueden hacer cosas tan interesantes como por ejemplo pasarle el resultado de un comando a través de una variable. Y esa variable que vamos a poder utilizar en el contenedor va a contener el resultado del comando ejecutado en la máquina host.
+
+```console
+sudo docker run -it --rm --env x=`pwd` image:v4
+
+root@5022f2cdf066:/datos1# echo $x
+
+/home/usuario/Development/test
+```
+
+En el ejemplo, le paso *path* del directorio en el que me encuentro en el host, por si lo necesitara dentro del contenedor.
+
+Entonces, hemos visto que yo puedo pasarle cosas que luego va a necesitar el contenedor.
+
+En el *Dockerfile*, para crear una variable en el contenedor utilizo la directiva `ENV`, con el nombre de la varible y el valor.
+
+```Dockerfile
+FROM ubuntu
+RUN apt-get update
+RUN apt-get install -y python
+RUN echo "1.0" >> /etc/version && apt-get install -y git \
+    && apt-get install -y iputils-ping
+
+##WORKDIR##
+RUN mkdir /datos
+WORKDIR /datos
+RUN touch f1.txt
+RUN mkdir /datos1
+WORKDIR /datos1
+RUN touch f2.txt
+
+##COPY##
+COPY index.html .
+COPY app.log /datos
+
+##ADD##
+ADD docs docs
+ADD f* /datos/
+ADD f.tar .
+
+##ENV##
+ENV dir=/data dir1=/data1
+RUN mkdir $dir && mkdir $dir1
+
+##ENTRYPOINT##
+ENTRYPOINT ["/bin/bash"]
+```
+
+Incluso puedo utilizar esas variables dentro del *Dockerfile* haciendo referencia mediante el símbolo *$* y su nombre.
+
+Vemos que se utiliza la misma mecánica que se utiliza en una shell de Linux.
+
+Y puedo crear más de una variable al mismo tiempo en la directiva `ENV`.
+
+Vamos a ver cómo funciona, vamos a crear la imagen
+
+```console
+$ sudo docker build -t image:v6 .
+```
+
+Vamos a crear un contenedor
+
+```console
+$ sudo docker run -it --rm image:v6
+
+root@74b438c25011:/datos1# 
+```
+
+Podemos comprobar que me ha creado los directorios */data* y */data1* a través de las variables de entorno definidas a través de la directiva `ENV` en el *Dockerfile*
+
+```console
+root@74b438c25011:/# cd /
+root@74b438c25011:/# ls -l /
+
+total 64
+lrwxrwxrwx   1 root root    7 Oct  8 01:31 bin -> usr/bin
+drwxr-xr-x   2 root root 4096 Apr 15  2020 boot
+drwxr-xr-x   2 root root 4096 Nov 22 18:23 data
+drwxr-xr-x   2 root root 4096 Nov 22 18:23 data1
+drwxr-xr-x   1 root root 4096 Nov 15 20:40 datos
+drwxr-xr-x   1 root root 4096 Nov 15 20:40 datos1
+drwxr-xr-x   5 root root  360 Nov 22 18:25 dev
+drwxr-xr-x   1 root root 4096 Nov 22 18:25 etc
+drwxr-xr-x   2 root root 4096 Apr 15  2020 home
+lrwxrwxrwx   1 root root    7 Oct  8 01:31 lib -> usr/lib
+lrwxrwxrwx   1 root root    9 Oct  8 01:31 lib32 -> usr/lib32
+lrwxrwxrwx   1 root root    9 Oct  8 01:31 lib64 -> usr/lib64
+lrwxrwxrwx   1 root root   10 Oct  8 01:31 libx32 -> usr/libx32
+drwxr-xr-x   2 root root 4096 Oct  8 01:31 media
+drwxr-xr-x   2 root root 4096 Oct  8 01:31 mnt
+drwxr-xr-x   2 root root 4096 Oct  8 01:31 opt
+dr-xr-xr-x 277 root root    0 Nov 22 18:25 proc
+drwx------   2 root root 4096 Oct  8 01:34 root
+drwxr-xr-x   1 root root 4096 Oct 23 17:32 run
+lrwxrwxrwx   1 root root    8 Oct  8 01:31 sbin -> usr/sbin
+drwxr-xr-x   2 root root 4096 Oct  8 01:31 srv
+dr-xr-xr-x  13 root root    0 Nov 22 18:25 sys
+drwxrwxrwt   1 root root 4096 Nov 15 20:39 tmp
+drwxr-xr-x   1 root root 4096 Oct  8 01:31 usr
+drwxr-xr-x   1 root root 4096 Oct  8 01:34 var
+```
+
+Además, podemos ver que también me las ha incluido en las variables del environment del sistema operativo para que el contenedor las utilice cuando las necesite.
+
+```console
+root@74b438c25011:/# env
+
+HOSTNAME=74b438c25011
+PWD=/
+HOME=/root
+LS_COLORS=rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=30;41:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:
+dir1=/data1
+LESSCLOSE=/usr/bin/lesspipe %s %s
+TERM=xterm
+LESSOPEN=| /usr/bin/lesspipe %s
+dir=/data
+SHLVL=1
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+OLDPWD=/datos1
+_=/usr/bin/env
+```
+
+Entonces hemos visto que la directiva `ENV` es muy importante para definir variables que yo puedo utilizar tanto en el *Dockerfile*, como luego, dentro del contenedor.
