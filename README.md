@@ -63,6 +63,7 @@
     - [ADD](###-ADD)
   - [5.11 ENV](##-5.11-ENV)
   - [5.12 ARG](##-5.12-ARG)
+  - [5.13 EXPOSE](##-5.13-EXPOSE)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -6629,7 +6630,7 @@ root@cbb351f766ac:/datos1#
 
 Vemos que al final aparece el usuario *tom*
 
-Y si me voy al directorio `/home`, veo que hay un directorio para el usuario llamado *tom*
+Y si me voy al directorio `/home`, veo que también ha creado un directorio para el usuario *tom*
 
 ```console
 root@cbb351f766ac:/datos1# cd /home/
@@ -6641,3 +6642,123 @@ root@cbb351f766ac:/home#
 ```
 
 Y como hemos dicho, no tiene password y le falta alguna otra cosa porque teníamos que haber hecho el script completo, pero para el ejemplo nos sirve.
+
+## 5.13 EXPOSE
+
+La directiva `EXPOSE` nos permite exponer puertos, es decir, indicar que en la imagen va a ir un puerto que luego puede ser utilizado púbilicamente. Pero que quede claro, los puertos que pongamos aquí no se publican o se hacen públicos por defecto, tengo que seguir utilizando la opción -p o -P que vimos en la parte de redes.
+
+Entonces, el sentido de esto es ayudar a la persona que luego va a construir el contenedor a ver qué puertos va a necesitar, porque podemos tener multitud de productos que escuchen por diferentes puertos y a no ser que conozcamos el producto que estamos instalando o que vamos a usar dentro del contenedor, puede ser difícil saber qué puertos son.
+
+Con `EXPOSE` lo que le estamos diciendo básicamente es que esta imagen está utilizando ese puerto para alguno de los productos que tenemos.
+
+Vamos a ver un ejemplo, en el que vamos a instalar un Apache que escucha por el puerto 80.
+
+```Dockerfile
+FROM ubuntu
+RUN apt-get update
+RUN apt-get install -y python
+RUN echo "1.0" >> /etc/version && apt-get install -y git \
+    && apt-get install -y iputils-ping
+
+##WORKDIR##
+RUN mkdir /datos
+WORKDIR /datos
+RUN touch f1.txt
+RUN mkdir /datos1
+WORKDIR /datos1
+RUN touch f2.txt
+
+##COPY##
+COPY index.html .
+COPY app.log /datos
+
+##ADD##
+ADD docs docs
+ADD f* /datos/
+ADD f.tar .
+
+##ENV##
+ENV dir=/data dir1=/data1
+RUN mkdir $dir && mkdir $dir1
+
+##ARG##
+#ARG dir2
+#RUN mkdir $dir2
+#ARG user
+#ENV user_docker $user
+#ADD add_user.sh /datos1
+#RUN /datos1/add_user.sh
+
+##EXPOSE##
+ENV TZ=Europe/Madrid
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+RUN apt-get update
+RUN apt-get install -y apache2
+EXPOSE 80
+ADD entrypoint.sh /datos1
+
+##CMD##
+CMD /datos1/entrypoint.sh
+
+##ENTRYPOINT##
+#ENTRYPOINT ["/bin/bash"]
+```
+
+Como podemos observar, se ha comentado el apartado de la directiva `ARG` para no tener que utilizar las variables *dir2* y *user* para que sea más sencillo el ejemplo
+
+Además, también se ha comentado la directiva `ENTRYPOINT` para que no entre en la bash directamente, sino que ejecute el script y que arranque el Apache y luego ejecute la bash.
+
+Dentro del directorio donde está el *Dockerfile* se ha creado un fichero llamado *entrypoint.sh*, para que me arranque el Apache con `apachectl start` y luego entre en la bash.
+El contenido del fichero *entrypoint.sh*
+
+```bash
+# entrypoint.sh
+
+apachectl start
+/bin/bash
+```
+
+Y le damos permisos de ejecución
+
+```console
+$ chmod +x entrypoint.sh
+```
+
+No se puede poner un `RUN` para arrancar directamente Apache porque los comandos que suponen cambiar el estado de productos, servicios, ... no funcionan con el `RUN` y no quedan reflejado en la imagen, porque en la imagen no queda arrancado el producto, entonces, si quiero que haya productos o servicios arrancados al arrancar el contenedor, lo tengo que hacer mediante scripts.
+
+Resumiendo, lo que se ha hecho es instalar el Apache, exponer el puerto 80, añadir el fichero *sh* a */datos1* y luego al arrancar el contenedor, lo invoco.
+
+La variable *TZ* establece el timezone del sistema. Es necesario porque al instalar Apache, instala el certbot y al construir la imagen, salta un comando interactivo que pide que se indique el timezone del sistema.
+
+Vamos a crear la imagen
+
+```console
+$ sudo docker build -t image:v8 .
+```
+
+Ahora creamos el contenedor
+
+```console
+$ sudo docker run -it --rm image:v8
+
+AH00558: apache2: Could not reliably determine the server's fully qualified domain name, using 172.17.0.2. Set the 'ServerName' directive globally to suppress this message
+root@7884fe051ffc:/datos1# 
+```
+
+Arranca el contenedor, pero me da un warning. Este warning es normal que aparezca porque el Apache, una de las propiedades que tiene es que le tengo que decir el nombre del sevidor, y sino, te muestra el warning diciendo que va a utilizar el predefinido, que es la IP. No es muy correcto utilizar este tipo de productos con IP, se deberían utilizar nombres de servidores, pero bueno, para el ejemplo es indiferente.
+
+Si hacemos la prueba, este contenedor no va a funcionar, porque como vimos en la parte de redes, si yo no le pongo el puerto por el que voy a mapearlo con la máquina principal, no funciona porque no puedo acceder a él.
+
+Entonces salimos y creamos de nuevo el contenedor mapeando los puertos, que el puerto 8080 de la máquina principal mapee con el puerto 80 del contenedor.
+
+```docker
+$ sudo docker run -it --rm -p 8080:80 image:v8
+```
+
+Si ahora probamos
+
+http://localhost:8080/
+
+Vemos que me está arrancando el Apache y puedo verlo en la máquina host por el puerto 8080 y por el puerto 80 en el contenedor.
+
+Bueno, pues ya hemos visto cómo construir una imagen que tenga un EXPOSE siempre y cuando hayamos puesto dentro algún producto que tenga puertos y podamos acceder al mismo.
