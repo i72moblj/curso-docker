@@ -62,6 +62,7 @@
     - [Comentarios](###-Comentarios)
     - [ADD](###-ADD)
   - [5.11 ENV](##-5.11-ENV)
+  - [5.12 ARG](##-5.12-ARG)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -6402,3 +6403,241 @@ _=/usr/bin/env
 ```
 
 Entonces hemos visto que la directiva `ENV` es muy importante para definir variables que yo puedo utilizar tanto en el *Dockerfile*, como luego, dentro del contenedor.
+
+## 5.12 ARG
+
+La directiva `ARG` sirve para poder pasar variables. Es similar a `ENV`, pero tiene algunas diferencias.
+
+La principal diferencia es que con `ENV` nos permite pasar variables en el momento de crear un contenedor, es decir, en el `docker run`, y la directiva `ARG` nos permite pasar variables en el momento de construir la imagen, es decir, en el `docker build`, por lo que yo puedo cambiar el comportamiento de la construcción de esa imagen a través de esa variable.
+
+```Dockerfile
+FROM ubuntu
+RUN apt-get update
+RUN apt-get install -y python
+RUN echo "1.0" >> /etc/version && apt-get install -y git \
+    && apt-get install -y iputils-ping
+
+##WORKDIR##
+RUN mkdir /datos
+WORKDIR /datos
+RUN touch f1.txt
+RUN mkdir /datos1
+WORKDIR /datos1
+RUN touch f2.txt
+
+##COPY##
+COPY index.html .
+COPY app.log /datos
+
+##ADD##
+ADD docs docs
+ADD f* /datos/
+ADD f.tar .
+
+##ENV##
+ENV dir=/data dir1=/data1
+RUN mkdir $dir && mkdir $dir1
+
+##ARG##
+ARG dir2
+RUN mkdir $dir2
+
+##ENTRYPOINT##
+ENTRYPOINT ["/bin/bash"]
+```
+
+Otra diferencia es que al declarar una variable con `ARG` no tengo por qué asignarle un valor, como sí hay que hacer con `ENV`.
+
+Vamos a construir la imagen
+
+```console
+$ sudo docker build -t image:v7 .
+
+...
+mkdir: missing operand
+Try 'mkdir --help' for more information.
+The command '/bin/sh -c mkdir $dir2' returned a non-zero code: 1
+```
+
+Vemos que me da un error. Dice que al comando mkdir le falta un argumento, que es el que debería tener la variable *$dir2* indicado en la directiva `ARG`, pero como yo no le he pasado ningún valor a la variable *$dir2*, pues por eso da error.
+
+Para pasarle una variable a la hora de construir la imagen
+
+```console
+$ sudo docker build -t image:v7 --build-arg dir2=/data2 .
+```
+
+Y ahora sí que se ha construido la imagen sin errores
+
+Si construimos el contenedor
+
+```console
+$ sudo docker run -it --rm image:v7
+
+root@a92b7251ea3b:/datos1#
+
+root@a92b7251ea3b:/datos1# ls -l /
+total 68
+lrwxrwxrwx   1 root root    7 Oct  8 01:31 bin -> usr/bin
+drwxr-xr-x   2 root root 4096 Apr 15  2020 boot
+drwxr-xr-x   2 root root 4096 Nov 22 18:23 data
+drwxr-xr-x   2 root root 4096 Nov 22 18:23 data1
+drwxr-xr-x   2 root root 4096 Nov 28 15:28 data2
+drwxr-xr-x   1 root root 4096 Nov 15 20:40 datos
+drwxr-xr-x   1 root root 4096 Nov 15 20:40 datos1
+drwxr-xr-x   5 root root  360 Nov 28 15:29 dev
+drwxr-xr-x   1 root root 4096 Nov 28 15:29 etc
+drwxr-xr-x   2 root root 4096 Apr 15  2020 home
+lrwxrwxrwx   1 root root    7 Oct  8 01:31 lib -> usr/lib
+lrwxrwxrwx   1 root root    9 Oct  8 01:31 lib32 -> usr/lib32
+lrwxrwxrwx   1 root root    9 Oct  8 01:31 lib64 -> usr/lib64
+lrwxrwxrwx   1 root root   10 Oct  8 01:31 libx32 -> usr/libx32
+drwxr-xr-x   2 root root 4096 Oct  8 01:31 media
+drwxr-xr-x   2 root root 4096 Oct  8 01:31 mnt
+drwxr-xr-x   2 root root 4096 Oct  8 01:31 opt
+dr-xr-xr-x 276 root root    0 Nov 28 15:29 proc
+drwx------   2 root root 4096 Oct  8 01:34 root
+drwxr-xr-x   1 root root 4096 Oct 23 17:32 run
+lrwxrwxrwx   1 root root    8 Oct  8 01:31 sbin -> usr/sbin
+drwxr-xr-x   2 root root 4096 Oct  8 01:31 srv
+dr-xr-xr-x  13 root root    0 Nov 28 15:29 sys
+drwxrwxrwt   1 root root 4096 Nov 15 20:39 tmp
+drwxr-xr-x   1 root root 4096 Oct  8 01:31 usr
+drwxr-xr-x   1 root root 4096 Oct  8 01:34 var
+
+root@a92b7251ea3b:/datos1#
+```
+
+Podemos comprobar que ha creado el directorio /data2
+
+Vamos a hacer otro ejemplo más interesante, y es que cuando cree la imagen, le voy a pasar un usuario como variable y ese usuario lo vamos a crear en el contenedor. Además lo vamos a hacer con un script en vez de con un RUN, que es lo más fácil, para conocer cómo se utiliza también un script en el contenedor.
+
+Creamos un fichero add_user.sh (dentro de la carpeta donde se encuentra el Dockerfile) y va a tener una variable $user_docker que nos va a servir para ejecutar el comando adduser
+
+```console
+$ vim add_user.sh
+```
+
+Con el siguiente contenido
+
+```bash
+adduser $user_docker
+```
+
+Y le asignamos permisos de ejecución, porque sino al pasarlo al Docker no funcionaría.
+
+```console
+$ chmod +x add_user.sh
+```
+
+Bueno, ya que tenemos el script, volvemos al Dockerfile
+
+```Dockerfile
+FROM ubuntu
+RUN apt-get update
+RUN apt-get install -y python
+RUN echo "1.0" >> /etc/version && apt-get install -y git \
+    && apt-get install -y iputils-ping
+
+##WORKDIR##
+RUN mkdir /datos
+WORKDIR /datos
+RUN touch f1.txt
+RUN mkdir /datos1
+WORKDIR /datos1
+RUN touch f2.txt
+
+##COPY##
+COPY index.html .
+COPY app.log /datos
+
+##ADD##
+ADD docs docs
+ADD f* /datos/
+ADD f.tar .
+
+##ENV##
+ENV dir=/data dir1=/data1
+RUN mkdir $dir && mkdir $dir1
+
+##ARG##
+ARG dir2
+RUN mkdir $dir2
+ARG user
+ENV user_docker $user
+ADD add_user.sh /datos1
+RUN /datos1/add_user.sh
+
+##ENTRYPOINT##
+ENTRYPOINT ["/bin/bash"]
+```
+
+Vemos que la variable de `ARG` se llama *user* y en el script le hemos llamado *$user_docker* y eso es porque cuando trabajamos con `ARG`, el inconveniente es que no se hereda en el contenedor, eso lo hace `ENV`.
+
+Recordemos que tenemos 2 tipos de directivas, `ARG` y `ENV`, la primera directiva `ARG` es para crear la imagen y la segunda directiva `ENV` es para trabajar con el contenedor, cuando creo el contenedor.
+
+Entonces, lo que hemos hecho, básicamente, es que al crear la imagen le pasamos el usuario a la variable *$user* definida en `ARG` y luego ese nombre de usuario se lo asigno a la variable *$user_docker* definida en `ENV`.
+
+Entonces, le pasamos un argumento cuando estamos creando la imagen, luego la asignamos a una variable de tipo ENV, pasamos el fichero al directorio /datos1 del contenedor y lo ejecutamos.
+
+Por lo tanto cuando yo construya la imagen, le tengo que pasar la variable user y luego al construir el contenedor, de manera automática, debería haber creado ese usuario.
+
+Vamos a construir la imagen
+
+```console
+$ sudo docker build -t image:v7 --build-arg dir2=/data2 --build-arg user=tom .
+```
+
+Da fallo pero es porque habría que haber hecho el script de creación de usuario completo, porque dijimos que no podía haber comandos interactivos y al crear un usuario no pide la contraseña, ... La ha construido, pero seguramente nos de problemas ese usuario con la password y demás, pero para el ejemplo nos vale.
+
+Si ahora creamos un contenedor a partir de esa imagen
+
+```console
+$sudo build run -it --rm image:v7
+
+root@cbb351f766ac:/datos1# 
+```
+
+Y miramos el contenido del fichero `/etc/passwd` que es el que contiene los usuarios
+
+```console
+root@cbb351f766ac:/datos1# cat /etc/passwd
+
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+bin:x:2:2:bin:/bin:/usr/sbin/nologin
+sys:x:3:3:sys:/dev:/usr/sbin/nologin
+sync:x:4:65534:sync:/bin:/bin/sync
+games:x:5:60:games:/usr/games:/usr/sbin/nologin
+man:x:6:12:man:/var/cache/man:/usr/sbin/nologin
+lp:x:7:7:lp:/var/spool/lpd:/usr/sbin/nologin
+mail:x:8:8:mail:/var/mail:/usr/sbin/nologin
+news:x:9:9:news:/var/spool/news:/usr/sbin/nologin
+uucp:x:10:10:uucp:/var/spool/uucp:/usr/sbin/nologin
+proxy:x:13:13:proxy:/bin:/usr/sbin/nologin
+www-data:x:33:33:www-data:/var/www:/usr/sbin/nologin
+backup:x:34:34:backup:/var/backups:/usr/sbin/nologin
+list:x:38:38:Mailing List Manager:/var/list:/usr/sbin/nologin
+irc:x:39:39:ircd:/var/run/ircd:/usr/sbin/nologin
+gnats:x:41:41:Gnats Bug-Reporting System (admin):/var/lib/gnats:/usr/sbin/nologin
+nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin
+_apt:x:100:65534::/nonexistent:/usr/sbin/nologin
+tom:x:1000:1000:,,,:/home/tom:/bin/bash
+
+root@cbb351f766ac:/datos1# 
+```
+
+Vemos que al final aparece el usuario *tom*
+
+Y si me voy al directorio `/home`, veo que hay un directorio para el usuario llamado *tom*
+
+```console
+root@cbb351f766ac:/datos1# cd /home/
+
+root@cbb351f766ac:/home# ls
+tom
+
+root@cbb351f766ac:/home# 
+```
+
+Y como hemos dicho, no tiene password y le falta alguna otra cosa porque teníamos que haber hecho el script completo, pero para el ejemplo nos sirve.
