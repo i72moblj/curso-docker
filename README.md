@@ -64,6 +64,7 @@
   - [5.11 ENV](##-5.11-ENV)
   - [5.12 ARG](##-5.12-ARG)
   - [5.13 EXPOSE](##-5.13-EXPOSE)
+  - [5.14 VOLUME](##-5.14-VOLUME)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -6757,8 +6758,174 @@ $ sudo docker run -it --rm -p 8080:80 image:v8
 
 Si ahora probamos
 
-http://localhost:8080/
+[http://localhost:8080](http://localhost:8080)
 
 Vemos que me está arrancando el Apache y puedo verlo en la máquina host por el puerto 8080 y por el puerto 80 en el contenedor.
 
-Bueno, pues ya hemos visto cómo construir una imagen que tenga un EXPOSE siempre y cuando hayamos puesto dentro algún producto que tenga puertos y podamos acceder al mismo.
+Bueno, pues ya hemos visto cómo construir una imagen que tenga un `EXPOSE` siempre y cuando hayamos puesto dentro algún producto que tenga puertos y podamos acceder al mismo.
+
+## 5.14 VOLUME
+
+La directiva `VOLUME` nos permite crear volúmenes de manera automática cuando los creamos desde el Dockerfile.
+
+Vamos a ver un ejemplo donde vamos a asociar una página web a un volumen concreto para que pueda ser compartido por los distintos contenedores que arracamos con esa imagen.
+
+**Material Práctico:**
+> practica_web_volume.zip
+
+Vamos  crear una carpeta llamada *paginas* y dentro vamos a poner el contenido del material práctico, que es una página web sencillita, una plantilla bajada de internet.
+
+```Dockerfile
+FROM ubuntu
+RUN apt-get update
+RUN apt-get install -y python
+RUN echo "1.0" >> /etc/version && apt-get install -y git \
+    && apt-get install -y iputils-ping
+
+##WORKDIR##
+RUN mkdir /datos
+WORKDIR /datos
+RUN touch f1.txt
+RUN mkdir /datos1
+WORKDIR /datos1
+RUN touch f2.txt
+
+##COPY##
+COPY index.html .
+COPY app.log /datos
+
+##ADD##
+ADD docs docs
+ADD f* /datos/
+ADD f.tar .
+
+##ENV##
+ENV dir=/data dir1=/data1
+RUN mkdir $dir && mkdir $dir1
+
+##ARG##
+#ARG dir2
+#RUN mkdir $dir2
+#ARG user
+#ENV user_docker $user
+#ADD add_user.sh /datos1
+#RUN /datos1/add_user.sh
+
+##EXPOSE##
+ENV TZ=Europe/Madrid
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+RUN apt-get update
+RUN apt-get install -y apache2
+EXPOSE 80
+ADD entrypoint.sh /datos1
+
+##VOLUME##
+ADD paginas /var/www/html
+VOLUME ["/var/www/html"]
+
+##CMD##
+CMD /datos1/entrypoint.sh
+
+##ENTRYPOINT##
+#ENTRYPOINT ["/bin/bash"]
+```
+
+Lo que hemos hecho en la sección `VOLUME` es añadir el directorio *paginas* al directorio `/var/www/html` porque es el directorio por defecto desde donde Apache sirve las páginas web. Y lo que hace es copiar y sustituir lo que hubiera en el directorio `/var/www/html` por lo que hay en el directorio *paginas* de mi máquina host.
+
+Y luego, creo un volumen basado en ese directorio, eso es equivalente a la opción `-v` al hacer un `RUN` y crear un contenedor.
+
+Vamos a comprobar los volúmenes que tenemos ahora mismo
+
+```console
+$ sudo docker volume ls
+
+DRIVER              VOLUME NAME
+```
+
+De momento no tenemos ninguno, he borrado los de prácticas anteriores
+
+Cuando yo lance el primer contenedor basándome en esta imagen, debería crearme un nuevo volumen que albergara esa información, porque acordarse que los volúmenes son siempre externos al contenedor. Y luego crearemos un segundo contenedor que apunte a ese directorio también, de tal forma que podemos ver que dos contenedores distintos están compartiendo un volumen de manera similar a lo que vimos en la sección de volúmenes, pero desde el Dockerfile.
+
+Creamos la imagen
+
+```console
+$ sudo docker build -t image:v9 .
+```
+
+Y me creo un contendor
+
+```console
+$ sudo docker run -it --rm -p 8080:80 --name c1 image:v9
+
+AH00558: apache2: Could not reliably determine the server's fully qualified domain name, using 172.17.0.2. Set the 'ServerName' directive globally to suppress this message
+root@c883b2a311ef:/datos1# 
+```
+
+Esto va a tener dos efectos, el primero es que si visitamos
+
+[http://localhost:8080](http://localhost:8080)
+
+Vemos que en vez de la página por defecto de Apache, aparece la plantilla que hemos metido en el directorio *paginas*
+
+Y segundo, que si volvemos a mirar los volúmenes
+
+```console
+$ sudo docker volume ls
+
+DRIVER              VOLUME NAME
+local               5309695964d34137303bd1bbeec8f1a2105a61b975f364c695b018de505725ed
+```
+
+Podemos ver que se ha creado un nuevo volumen
+
+Si miramos el contenido de `/var/lib/docker/volumes/5309695964d34137303bd1bbeec8f1a2105a61b975f364c695b018de505725ed/_data`
+
+```console
+# cd /var/lib/docker/volumes/5309695964d34137303bd1bbeec8f1a2105a61b975f364c695b018de505725ed/_data
+# ls -l
+
+total 16
+drwxr-xr-x 2 root root 4096 nov 28 21:04 images
+-rw-r--r-- 1 root root 4365 ago 22  2008 index.html
+-rw-r--r-- 1 root root 2863 abr  9  2008 style.css
+```
+
+Vemos que tenemos el contenido de la carpeta *paginas*, es decir, la plantilla
+
+Si creamos un segundo contenedor 
+
+```console
+$ sudo docker run -it --rm -p 9080:80 --volumes-from c1 --name c2 image:v9
+
+AH00558: apache2: Could not reliably determine the server's fully qualified domain name, using 172.17.0.3. Set the 'ServerName' directive globally to suppress this message
+root@7cda690a53f8:/datos1# 
+```
+
+Hemos cambiado el puerto porque no puedo tener mapeado el mismo puerto de la máquina host para más de un contenedor y el nombre y hemos añadido `--volumes-from` *c1* porque sino lo ponemos crea su propio volumen, y lo que queremos es que utilice el volumen del contenedor *c1*, queremos tener ese volumen compartido.
+
+Podemos acceder a la página
+
+[http://localhost:9080](http://localhost:9080)
+
+Vemos que también carga la plantilla
+
+Si comprobamos los volúmenes
+
+```console
+$ sudo docker volume ls
+
+DRIVER              VOLUME NAME
+local               5309695964d34137303bd1bbeec8f1a2105a61b975f364c695b018de505725ed
+```
+
+vemos que no ha creado un nuevo volumen, sólo hay un volumen, el que hemos creado anteriormente
+
+Y podemos probar a modificar el `index.html` dentro de `/var/lib/docker/volumes/.../_data`, y recargamos las páginas de los dos contenedores, vemos que se ha modificado en los dos contenedores.
+
+Pero cuidado, que como al crear los contenedores hemos utilizado la opción `--rm`, cuando salgamos de todos los contenedores, el volumen se va a eliminar.
+
+```console
+$ sudo docker volume ls
+
+DRIVER              VOLUME NAME
+```
