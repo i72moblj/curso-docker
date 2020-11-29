@@ -65,6 +65,7 @@
   - [5.12 ARG](##-5.12-ARG)
   - [5.13 EXPOSE](##-5.13-EXPOSE)
   - [5.14 VOLUME](##-5.14-VOLUME)
+  - [5.15 Subir imágenes a Docker Hub](##-5.15-Subir-imágenes-a-Docker-Hub)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -6930,5 +6931,168 @@ $ sudo docker volume ls
 DRIVER              VOLUME NAME
 ```
 
-**Ejercicio Práctico:**
-> Práctica 15 - Dockerfile nginx
+**Ejercicio Práctico 1:**
+> Práctica 15 - Dockerfile 1 - Crear una imagen de Nginx
+
+**Ejercicio Práctico 2:**
+> Práctica 16 - Dockerfile 2 - Crear una imagen PostgreSQL con variables y scripts
+
+## 5.15 Subir imágenes a Docker Hub
+
+Para subir una imágen a nuestro repositorio de Docker Hub, lo primero que tenemos que hacer es conectarnos a Docker Hub con nuestro usuario.
+
+El comando `docker login` nos permite logearme dentro de nuestra cuenta de Docker Hub para hacer push y pull de imágenes. Nos pide usuario y contraseña.
+
+```console
+$ sudo docker login
+
+Login with your Docker ID to push and pull images from Docker Hub. If you don't have a Docker ID, head over to https://hub.docker.com to create one.
+Username: i72moblj
+Password: 
+Login Succeeded
+```
+
+A partir de ahora, mientras dure la sesión, tenga abierta la terminal y tenga la conexión contra Docker Hub, pues voy a poder trabajar con Docker Hub sin tener que volver a logearme.
+
+Para subir la imagen se hace con `docker push` indicando nombre_usuario/nombre_repositorio
+
+En el repositorio local le puedo poner el nombre que yo quiera a la imagen, pero si yo quiero subirla a Docker Hub, tengo que seguir las reglas y es que para nombrar mis repositorios tengo que anteponer mi nombre de usuario. Sólo en los repositorios oficiales se puede omitir el nombre de usuario. Como yo no tengo un repositorio oficial, pues tendré que especificar el nombre de usuario en el nombre del repositorio.
+
+Si a nuestra imagen no le hemos puesto el nombre de usuario, lo podemos cambiar con `docker image tag`. Aunque si teníamos pensado subir la imagen a Docker Hub, lo correcto hubiera sido ponerle el nombre correcto formado por nombre_usuario/nombre_repositorio desde el principio.
+
+```console
+$ sudo docker images
+
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+i72moblj/nginx      v3                  5b062f21c925        3 hours ago         164MB
+i72moblj/nginx      v2                  f26e1e925186        4 hours ago         159MB
+i72moblj/nginx      v1                  5f423b17a8de        4 hours ago         159MB
+i72moblj/nginx      latest              6486459f3d1f        4 hours ago         158MB
+image               v9                  139b1312bb11        22 hours ago        293MB
+image               v8                  e3e5785d5cc9        24 hours ago        293MB
+image               v7                  fc835e7751a3        26 hours ago        239MB
+ubuntu              20.04               f643c72bc252        3 days ago          72.9MB
+image               v6                  b2a62c15e25a        7 days ago          239MB
+image               v5                  27129eb3f58c        13 days ago         239MB
+image               v4                  30229cd4349d        13 days ago         239MB
+image               v3                  dc27c5776c56        13 days ago         239MB
+image               v2                  54ec8e73192a        3 weeks ago         239MB
+image               v1                  e6a5effa70cd        3 weeks ago         239MB
+ubuntu              latest              d70eaf7277ea        5 weeks ago         72.9MB
+```
+
+Vamos a hacer un ejemplo con una imagen que no tenga el nombre de usuario.
+
+Con el comando `docker image tag` puedo crear una imagen con otro nombre.
+
+```console
+$ sudo docker image tag image:v7 i72moblj/image:v7
+```
+
+Vamos a comprobar las imágenes
+
+```console
+$ sudo docker images
+
+REPOSITORY          TAG                 IMAGE ID            CREATED             SIZE
+i72moblj/nginx      v3                  5b062f21c925        4 hours ago         164MB
+i72moblj/nginx      v2                  f26e1e925186        4 hours ago         159MB
+i72moblj/nginx      v1                  5f423b17a8de        4 hours ago         159MB
+i72moblj/nginx      latest              6486459f3d1f        4 hours ago         158MB
+image               v9                  139b1312bb11        23 hours ago        293MB
+image               v8                  e3e5785d5cc9        24 hours ago        293MB
+i72moblj/image      v7                  fc835e7751a3        27 hours ago        239MB
+image               v7                  fc835e7751a3        27 hours ago        239MB
+ubuntu              20.04               f643c72bc252        3 days ago          72.9MB
+image               v6                  b2a62c15e25a        7 days ago          239MB
+image               v5                  27129eb3f58c        13 days ago         239MB
+image               v4                  30229cd4349d        13 days ago         239MB
+image               v3                  dc27c5776c56        2 weeks ago         239MB
+image               v2                  54ec8e73192a        3 weeks ago         239MB
+image               v1                  e6a5effa70cd        3 weeks ago         239MB
+ubuntu              latest              d70eaf7277ea        5 weeks ago         72.9MB
+```
+
+No la renombra, sino que crea otra con el nombre indicado, por eso tenemos *image:v7* y *i72moblj/image:v7*. De hecho el `IMAGE ID` es el mismo, por lo que es como una especie de enlace.
+
+Una vez que tenemos hecho esto, ya sí que podemos hacer `docker push` de la imagen.
+
+```console
+$ sudo docker push i72moblj/image:v7
+
+The push refers to repository [docker.io/i72moblj/image]
+7fc771561dc0: Pushed 
+30ee23dd1171: Pushed 
+41bdc50c909b: Pushed 
+7d6230a6ee91: Pushed 
+64f12d367248: Pushed 
+8089e570f8d1: Pushed 
+9127f19c36d8: Pushed 
+26c47d58fec9: Pushed 
+4373d7f9355a: Pushed 
+488e1e79ebc6: Pushed 
+6bc577a4d558: Pushed 
+74e4a1723b4a: Pushed 
+151ee6a6de5a: Pushed 
+fc85f661424e: Pushed 
+6d8d75303395: Pushed 
+707246d2b65d: Pushed 
+cc9d18e90faa: Mounted from library/ubuntu 
+0c2689e3f920: Mounted from library/ubuntu 
+47dde53750b4: Mounted from library/ubuntu 
+v7: digest: sha256:7557b29919ed0f0c8a2b45febe35e2dafb0fae63f9b9d93823bb230556323186 size: 4271
+```
+
+Lo que va a hacer es hacer push de todos los componentes y cuando termine, si todo es correcto, tendremos un nuevo repositorio con una imagen con tag.
+
+Entonces, si vamos a nuestra cuenta de Docker Hub y entramos a repositorios, veremos que está allí.
+
+Sería conveniente añadir una descripción.
+
+Si subimos otra versión de la misma imagen a nuestra cuenta de Docker Hub, podremos comprobar que la incluye en el mismo repositorio y añade el nuevo tag a la lista de tags de la imagen.
+
+```console
+$ sudo docker push i72moblj/image:v6
+```
+
+También sería interesante utilizar el comando `docker image tag` para indicar la etiqueta latest.
+
+```console
+$ sudo docker image tag image:v7 i72moblj/image:latest
+```
+
+Y habría que volver a subirla
+
+```console
+$ sudo docker push i72moblj/image:latest
+
+The push refers to repository [docker.io/i72moblj/image]
+7fc771561dc0: Layer already exists 
+30ee23dd1171: Layer already exists 
+41bdc50c909b: Layer already exists 
+7d6230a6ee91: Layer already exists 
+64f12d367248: Layer already exists 
+8089e570f8d1: Layer already exists 
+9127f19c36d8: Layer already exists 
+26c47d58fec9: Layer already exists 
+4373d7f9355a: Layer already exists 
+488e1e79ebc6: Layer already exists 
+6bc577a4d558: Layer already exists 
+74e4a1723b4a: Layer already exists 
+151ee6a6de5a: Layer already exists 
+fc85f661424e: Layer already exists 
+6d8d75303395: Layer already exists 
+707246d2b65d: Layer already exists 
+cc9d18e90faa: Layer already exists 
+0c2689e3f920: Layer already exists 
+47dde53750b4: Layer already exists 
+latest: digest: sha256:7557b29919ed0f0c8a2b45febe35e2dafb0fae63f9b9d93823bb230556323186 size: 4271
+```
+
+Como comentamos, las imágenes están formadas por capas, entonces si subimos imágenes que comparten todas o algunas de las capas, va a indicar que esas capas ya existen y no las va a volver a subir.
+
+Ahora ya estaría disponible en Docker Hub, de tal manera que si yo elimino una de esas imágenes de mi repositorio local, podría volver a descargármela de nuestro repositorio de Docker Hub.
+
+```console
+$ sudo docker pull i72moblj/image:v7
+```
