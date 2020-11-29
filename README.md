@@ -6929,3 +6929,6 @@ $ sudo docker volume ls
 
 DRIVER              VOLUME NAME
 ```
+
+**Ejercicio Práctico:**
+> Práctica 15 - Dockerfile nginx
