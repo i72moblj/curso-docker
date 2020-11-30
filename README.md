@@ -7096,3 +7096,6 @@ Ahora ya estaría disponible en Docker Hub, de tal manera que si yo elimino una 
 ```console
 $ sudo docker pull i72moblj/image:v7
 ```
+
+**Ejercicio Práctico**
+> Práctica 17 - Subir imágenes a Docker Hub.pdf
