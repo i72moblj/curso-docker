@@ -66,6 +66,10 @@
   - [5.13 EXPOSE](##-5.13-EXPOSE)
   - [5.14 VOLUME](##-5.14-VOLUME)
   - [5.15 Subir imágenes a Docker Hub](##-5.15-Subir-imágenes-a-Docker-Hub)
+- [SECCIÓN 6: Docker Compose](#-SECCIÓN-6:-Docker-Compose)
+  - [6.1 Introducción a Docker Compose](##-6.1-Introducción-a-Docker-Compose)
+  - [6.2 Instalar Docker Compose](##-6.2-Instalar-Docker-Compose)
+  - [6.3 Fichero docker-compose.yml](##-6.3-Fichero-docker-compose.yml)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -7099,3 +7103,156 @@ $ sudo docker pull i72moblj/image:v7
 
 **Ejercicio Práctico**
 > Práctica 17 - Subir imágenes a Docker Hub.pdf
+
+# SECCIÓN 6: Docker Compose
+
+## 6.1 Introducción a Docker Compose
+
+Una de las características más interesantes de Docker permite el concepto de microservicios. Es decir, permite convertir una aplicación monolítica que está funcionando como un único bloque, en un entorno de microservicios donde tenemos un conjunto de contenedores que ofrecen las distintas funcionalidades de un determinado proyecto.
+
+![Introducción a Docker Compose](img/introduccion-docker-compose.png)
+
+En realidad esto ya lo sabemos hacer, porque hemos trabajado con contenedores, puertos, redes, volúmenes y enlaces, por lo que podríamos construir una arquitectura de microservicios a través de enlaces. El problema es que cuanto más contenedores tengamos, hacerlo de forma manual se convierte en una tarea compleja.
+
+Bueno, pues para eso surgió Docker Compose, que lo que hace es orquestar un conjunto de servicios o componentes de contenedores. Y eso lo hace a través de un fichero de configuración `.yml` que contiene las instrucciones para hacer los enlaces y la relación entre los contenedores / servicios de manera mucho más fácil. Entonces, Docker Compose no es nada más que un frontal contra Docker que me permite gestionar este tipo de arquitecturas de manera más fácil.
+
+En la siguiente imagen podemos ver un ejemplo de una arquitectura, un Stack de tipo *MEAN*, que es un entorno de desarrollo que está formado por Angular, Express.JS, Node.JS y MongoDB.
+
+![Docker Compose MEAN Stack](img/docker-compose-mean.png)
+
+Y podemos ver cómo se puede relacionar todos esos servicios en contenedores distintos y que no estén en el mismo entorno, en la misma máquina, sino que cada uno forme parte de un contenedor y se va a hacer a través de un fichero .yml.
+
+Este ejemplo lo haremos más adelante.
+
+## 6.2 Instalar Docker Compose
+
+Para instalar Docker Compose vamos a consultar la documentación oficial 
+[Install Docker Compose on Linux](https://docs.docker.com/compose/install/#install-compose-on-linux-systems)
+
+Descargamos la última versión estable de Docker Compose
+
+```console
+$ sudo curl -L "https://github.com/docker/compose/releases/download/1.27.4/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+```
+
+Y le asignamos permisos de ejecución al binario
+
+```console
+$ sudo chmod +x /usr/local/bin/docker-compose
+```
+
+Ahora podemos ejecutar docker-compose
+
+```console
+$ sudo docker-compose
+
+Define and run multi-container applications with Docker.
+
+Usage:
+  docker-compose [-f <arg>...] [options] [--] [COMMAND] [ARGS...]
+  docker-compose -h|--help
+
+Options:
+  -f, --file FILE             Specify an alternate compose file
+                              (default: docker-compose.yml)
+  -p, --project-name NAME     Specify an alternate project name
+                              (default: directory name)
+  -c, --context NAME          Specify a context name
+  --verbose                   Show more output
+  --log-level LEVEL           Set log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+  --no-ansi                   Do not print ANSI control characters
+  -v, --version               Print version and exit
+  -H, --host HOST             Daemon socket to connect to
+
+  --tls                       Use TLS; implied by --tlsverify
+  --tlscacert CA_PATH         Trust certs signed only by this CA
+  --tlscert CLIENT_CERT_PATH  Path to TLS certificate file
+  --tlskey TLS_KEY_PATH       Path to TLS key file
+  --tlsverify                 Use TLS and verify the remote
+  --skip-hostname-check       Don't check the daemon's hostname against the
+                              name specified in the client certificate
+  --project-directory PATH    Specify an alternate working directory
+                              (default: the path of the Compose file)
+  --compatibility             If set, Compose will attempt to convert keys
+                              in v3 files to their non-Swarm equivalent (DEPRECATED)
+  --env-file PATH             Specify an alternate environment file
+
+Commands:
+  build              Build or rebuild services
+  config             Validate and view the Compose file
+  create             Create services
+  down               Stop and remove containers, networks, images, and volumes
+  events             Receive real time events from containers
+  exec               Execute a command in a running container
+  help               Get help on a command
+  images             List images
+  kill               Kill containers
+  logs               View output from containers
+  pause              Pause services
+  port               Print the public port for a port binding
+  ps                 List containers
+  pull               Pull service images
+  push               Push service images
+  restart            Restart services
+  rm                 Remove stopped containers
+  run                Run a one-off command
+  scale              Set number of containers for a service
+  start              Start services
+  stop               Stop services
+  top                Display the running processes
+  unpause            Unpause services
+  up                 Create and start containers
+  version            Show version information and quit
+```
+
+Podemos ver todas las opciones que tiene. Más adelante veremos algunas.
+
+## 6.3 Fichero docker-compose.yml
+
+Se podría decir que el fichero `docker-compose.yml` actúa de manera similar al fichero `Dockerfile`, pero el fichero `Dockerfile` contiene las instrucciones para construir una imagen y el fichero `docker-compose.yml` contiene las instrucciones para construir nuestra arquitectura de contenedores / microservicios.
+
+El fichero `docker-compose.yml` está escrito en un lenguaje de marcado llamado `YAML`, y cuyo nombre es un acrónimo recursivo, *YAML Ain't Markup Language*. El indentado es muy importante.
+
+A continuación vamos a ver un ejemplo extraido de la documentación oficial para ver sus características.
+
+```yml
+version: "3.9"
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/code
+      - logvolume01:/var/log
+    links:
+      - redis
+  redis:
+    image: redis
+volumes:
+  logvolume01: {}
+```
+
+**version** indica el número de versión del fichero docker-compose.yml. Si miramos la documentación original, podemos ver la [tabla](https://docs.docker.com/compose/compose-file/compose-versioning/) que relaciona las versiones de Docker Compose con las versiones de Docker Engine soportadas. Esto es importante porque dependiendo de la versión de Docker en la que vayamos a lanzar el Docker Compose, tendremos que utilizar una versión u otra.
+
+**services** Docker Compose entiende a los contenedores que lo componen como servicios, porque como comentamos, Docker Compose está orientado a crear microservicios. Entonces bajo la cláusula services tendremos todos los servicios que vamos a tener en este fichero.
+
+Cada servicio es un contenedor y el nombre que aparece es definido por nosotros.
+
+Todo servicio debe tener al menos el atributo **build** o el atributo **image**.
+
+El atributo **build** permite construir la imagen a partir de un Dockerfile y en este atributo vamos a indicar el contexto de ese Dockerfile, es decir, el path a ese Dockerfile.
+
+El atributo **ports** nos indica el mapeo del puerto del host con el puerto del contenedor.
+
+El atributo **volumes** define los volúmenes.
+
+El atributo **links** nos define el enlace con otros contenedores / servicios. Es análogo a cuando en el capítulo de redes vimos la opción `--link` o bien una red específica para añadir los contenedores.
+
+El atributo **image** indica que se construya el contenedor / servicio a partir de una imagen que ya exista, y que se encontrará a nivel local o la cogerá de Docker Hub.
+
+Y luego vermos que el docker-compose.yml puede tener otros componentes aparte de servicios que son volúmenes, redes, ...
+
+Lo más importante de aquí es la parte en la que estamos definiendo los servicios, que están basados al final en imágenes, bien porque construyo la imagen a partir de un Dockerfile con la claúsula build o porque ya exista y la tome del repositorio local o de DockerHub.
+
+Entonces, lo que vamos a ver durante el resto de esta sección es algunas de estas propiedades con más detalle para ver cómo podemos crear todo un entorno de microservicios o de servicios compartidos con esta herramienta de manera bastante fácil.
