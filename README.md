@@ -70,6 +70,7 @@
   - [6.1 Introducción a Docker Compose](##-6.1-Introducción-a-Docker-Compose)
   - [6.2 Instalar Docker Compose](##-6.2-Instalar-Docker-Compose)
   - [6.3 Fichero docker-compose.yml](##-6.3-Fichero-docker-compose.yml)
+  - [6.4 Mi primer proyecto Compose](##-6.4-Mi-primer-proyecto-Compose)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -7256,3 +7257,295 @@ Y luego vermos que el docker-compose.yml puede tener otros componentes aparte de
 Lo más importante de aquí es la parte en la que estamos definiendo los servicios, que están basados al final en imágenes, bien porque construyo la imagen a partir de un Dockerfile con la claúsula build o porque ya exista y la tome del repositorio local o de DockerHub.
 
 Entonces, lo que vamos a ver durante el resto de esta sección es algunas de estas propiedades con más detalle para ver cómo podemos crear todo un entorno de microservicios o de servicios compartidos con esta herramienta de manera bastante fácil.
+
+## 6.4 Mi primer proyecto Compose
+
+Vamos a ver un ejemplo muy simple basado en nginx.
+
+Creamos un directorio que se llame *pr_nginx*.
+
+El nombre del directorio es importante porque Docker Compose usa el concepto de proyecto. Un proyecto no es más que todo el entorno que vamos a lanzar con Docker Compose. Y aunque le puedo poner un nombre en el momento de lanzarlo o crearlo, por defecto usa el nombre del directorio. Entonces es una buena práctica poner al directorio del proyecto Docker Compose el nombre que quiero utilizar.
+
+Dentro de ese directorio vamos a crear un fichero docker-compose.yml con el siguiente contenido:
+
+```yml
+version: '3'
+services:
+  nginx:
+    image: nginx
+    ports:
+    - "80:80"
+```
+
+Como vemos, utiliza la versión 3 de Docker Compose y define un único servicio que va a ser nginx, y al poner el atributo image, va a utilizar la imagen nginx tomándola del repositorio local o descargándola de Docker Hub. Y luego va a mapear el puerto 80 de la máquina host con el puerto 80 del contenedor o servicio.
+
+Para lanzarlo
+
+```console
+$ sudo docker-compose up
+```
+
+Podemos lanzarlo en modo background con la opción `-d`
+
+```console
+$ sudo docker-compose up -d
+```
+
+Normalmente el comando `docker-compose` se lanzará en modo background, aunque en este caso no la queremos en modo background, sino en modo interactivo para que me presente un log de lo que va haciendo, porque que en modo background no muestra nada.
+
+Vamos a lanzarlo:
+
+```console
+$ sudo docker-compose up
+
+Creating network "pr_nginx_default" with the default driver
+Creating pr_nginx_nginx_1 ... done
+Attaching to pr_nginx_nginx_1
+nginx_1  | /docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration
+nginx_1  | /docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/
+nginx_1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh
+nginx_1  | 10-listen-on-ipv6-by-default.sh: Getting the checksum of /etc/nginx/conf.d/default.conf
+nginx_1  | 10-listen-on-ipv6-by-default.sh: Enabled listen on IPv6 in /etc/nginx/conf.d/default.conf
+nginx_1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/20-envsubst-on-templates.sh
+nginx_1  | /docker-entrypoint.sh: Configuration complete; ready for start up
+```
+
+Lo primero que vemos es que me crea una red, la red *pr_nginx_default*, y eso es porque como dijimos, trabajar con la red bridge por defecto está desaconsejado y lo que nos recomiendan es crear nuestra propia red para enlazar los contenedores. También vemos que el tipo del driver de la red es el driver por defecto que es de tipo bridge.
+
+Vemos que por defecto nos crea la red. Y el nombre que le da a la red para este proyecto es el nombre del proyecto y le añade default. Más adelante veremos que le podemos poner un nombre a esa red, pero por defecto, si no lo indicamos, ese es el nombre que le va a dar a la red.
+
+Luego me crea el primer contenedor, que lo llama *pr_nginx_nginx_1*, que es el nombre del proyecto con el nombre de la imagen y 1. Lo del 1 es porque que luego veremos que puedo escalar y crear más contenedores a partir de esta imagen
+
+Luego hace un attach, que si recordamos el comando `docker attach` me permitía attacharme, asociarme, enlazarme a un contenedor, en este caso al primero.
+
+Si miramos los contenedores que tenemos
+
+```console
+$ sudo docker ps
+
+CONTAINER ID   IMAGE     COMMAND                  CREATED          STATUS          PORTS                NAMES
+ec0da4451628   nginx     "/docker-entrypoint.…"   15 minutes ago   Up 15 minutes   0.0.0.0:80->80/tcp   pr_nginx_nginx_1
+```
+
+Vemos que tenemos un contenedor normal y corriente, y eso es porque como hemos dicho, el Docker Compose no es más que un frontal, una herramienta que me permite simplificar el uso de microservicios en los contenedores, pero los contenedores son los mismos de siempre, por lo que yo podría trabajar con `docker` directamente, pero no es recomendable, lo recomendable es trabajar con `docker-compose`.
+
+Para probarlo [http://localhost:80](http://localhost:80) y vemos que llega perfectamente a mi nginx.
+
+Si ahora miramos las redes
+
+```console
+$ sudo docker network ls
+
+NETWORK ID     NAME               DRIVER    SCOPE
+8e3cc2cf3113   bridge             bridge    local
+774c8fbbcfaf   host               host      local
+f79b96876cfa   none               null      local
+5d6cede6837c   pr_nginx_default   bridge    local
+```
+
+Podemos comprobar que nos ha creado una red asociada a ese contenedor
+
+Y si inspeccionamos la red
+
+```console
+$ sudo docker network inspect pr_nginx_default
+
+[
+    {
+        "Name": "pr_nginx_default",
+        "Id": "5d6cede6837cdb7627de2752ed122b7d9eb6df47562bed733ed614052ab11d17",
+        "Created": "2020-12-09T16:25:41.546960515+01:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": null,
+            "Config": [
+                {
+                    "Subnet": "172.20.0.0/16",
+                    "Gateway": "172.20.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": true,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {
+            "ec0da44516284db887e83364935c573dddd925e76bbcb54845a51b23a05b945c": {
+                "Name": "pr_nginx_nginx_1",
+                "EndpointID": "530380c4fad937897285b4ceab78582e0d58c7fc4f733672b29d26e694c7535d",
+                "MacAddress": "02:42:ac:14:00:02",
+                "IPv4Address": "172.20.0.2/16",
+                "IPv6Address": ""
+            }
+        },
+        "Options": {},
+        "Labels": {
+            "com.docker.compose.network": "default",
+            "com.docker.compose.project": "pr_nginx"
+        }
+    }
+]
+```
+
+Podemos ver el contenedor que está asociado, que es el nginx que hemos creado.
+
+Podemos utilizar comandos de tipo `docker`, pero también podemos utilizar o es lo normal, comandos de tipo `docker-compose`.
+
+```console
+$ sudo docker-compose ps
+
+      Name                    Command               State         Ports       
+------------------------------------------------------------------------------
+pr_nginx_nginx_1   /docker-entrypoint.sh ngin ...   Up      0.0.0.0:80->80/tcp
+```
+
+Vemos que `docker-compose ps` muestra una información relativamente similar a la que mostraba con `docker ps` pero relacionada exclusivamente con todo el entorno de microservicios que hemos creado.
+
+Y como está attachado, vemos que las líneas después de hacer el `docker-compose up` en modo interactivo me va mostrando todo lo que va ocurriendo, por ejemplo las peticiones que se realizan al servicio.
+
+```console
+$ sudo docker-compose up
+Creating network "pr_nginx_default" with the default driver
+Creating pr_nginx_nginx_1 ... done
+Attaching to pr_nginx_nginx_1
+nginx_1  | /docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration
+nginx_1  | /docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/
+nginx_1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh
+nginx_1  | 10-listen-on-ipv6-by-default.sh: Getting the checksum of /etc/nginx/conf.d/default.conf
+nginx_1  | 10-listen-on-ipv6-by-default.sh: Enabled listen on IPv6 in /etc/nginx/conf.d/default.conf
+nginx_1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/20-envsubst-on-templates.sh
+nginx_1  | /docker-entrypoint.sh: Configuration complete; ready for start up
+nginx_1  | 172.20.0.1 - - [09/Dec/2020:15:55:40 +0000] "GET / HTTP/1.1" 200 612 "-" "Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0" "-"
+```
+
+En realidad lo que tengo es un entorno de contenedores normal pero que está gestionado por el Docker Compose.
+
+Si ejecutamos `docker-compose` sin argumentos
+
+```console
+$ sudo docker-compose
+
+Define and run multi-container applications with Docker.
+
+Usage:
+  docker-compose [-f <arg>...] [options] [COMMAND] [ARGS...]
+  docker-compose -h|--help
+
+Options:
+  -f, --file FILE             Specify an alternate compose file
+                              (default: docker-compose.yml)
+  -p, --project-name NAME     Specify an alternate project name
+                              (default: directory name)
+  --verbose                   Show more output
+  --log-level LEVEL           Set log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+  --no-ansi                   Do not print ANSI control characters
+  -v, --version               Print version and exit
+  -H, --host HOST             Daemon socket to connect to
+
+  --tls                       Use TLS; implied by --tlsverify
+  --tlscacert CA_PATH         Trust certs signed only by this CA
+  --tlscert CLIENT_CERT_PATH  Path to TLS certificate file
+  --tlskey TLS_KEY_PATH       Path to TLS key file
+  --tlsverify                 Use TLS and verify the remote
+  --skip-hostname-check       Don't check the daemon's hostname against the
+                              name specified in the client certificate
+  --project-directory PATH    Specify an alternate working directory
+                              (default: the path of the Compose file)
+  --compatibility             If set, Compose will attempt to convert deploy
+                              keys in v3 files to their non-Swarm equivalent
+
+Commands:
+  build              Build or rebuild services
+  bundle             Generate a Docker bundle from the Compose file
+  config             Validate and view the Compose file
+  create             Create services
+  down               Stop and remove containers, networks, images, and volumes
+  events             Receive real time events from containers
+  exec               Execute a command in a running container
+  help               Get help on a command
+  images             List images
+  kill               Kill containers
+  logs               View output from containers
+  pause              Pause services
+  port               Print the public port for a port binding
+  ps                 List containers
+  pull               Pull service images
+  push               Push service images
+  restart            Restart services
+  rm                 Remove stopped containers
+  run                Run a one-off command
+  scale              Set number of containers for a service
+  start              Start services
+  stop               Stop services
+  top                Display the running processes
+  unpause            Unpause services
+  up                 Create and start containers
+  version            Show the Docker-Compose version information
+```
+
+Vemos que hay un montón de comandos que son muy similares a los del docker normal, como el exec, pull, ps, ... Ya los veremos posteriormente.
+
+Si corto el proceso con `Ctrl + C` y cortamos el proceso
+
+```console
+$ sudo docker-compose up
+
+Creating network "pr_nginx_default" with the default driver
+Creating pr_nginx_nginx_1 ... done
+Attaching to pr_nginx_nginx_1
+nginx_1  | /docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration
+nginx_1  | /docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/
+nginx_1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh
+nginx_1  | 10-listen-on-ipv6-by-default.sh: Getting the checksum of /etc/nginx/conf.d/default.conf
+nginx_1  | 10-listen-on-ipv6-by-default.sh: Enabled listen on IPv6 in /etc/nginx/conf.d/default.conf
+nginx_1  | /docker-entrypoint.sh: Launching /docker-entrypoint.d/20-envsubst-on-templates.sh
+nginx_1  | /docker-entrypoint.sh: Configuration complete; ready for start up
+nginx_1  | 172.20.0.1 - - [09/Dec/2020:15:55:40 +0000] "GET / HTTP/1.1" 200 612 "-" "Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0" "-"
+^CGracefully stopping... (press Ctrl+C again to force)
+Stopping pr_nginx_nginx_1 ... done
+```
+
+Vemos que para el contenedor que tenía
+
+Si ahora vamos a mirar el estado del contenedor
+
+```console
+$ sudo docker-compose ps
+
+      Name                    Command               State    Ports
+------------------------------------------------------------------
+pr_nginx_nginx_1   /docker-entrypoint.sh ngin ...   Exit 0  
+```
+
+Vemos que el contenedor está parado, aparece `Exit 0`
+
+De hecho si hacemos un `docker ps`
+
+```console
+$ sudo docker ps
+
+CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES
+```
+
+Ya no lo tenemos, tenemos que hacer un `docker ps -a`
+
+```console
+$ sudo docker ps -a
+
+CONTAINER ID   IMAGE     COMMAND                  CREATED          STATUS                     PORTS     NAMES
+ec0da4451628   nginx     "/docker-entrypoint.…"   38 minutes ago   Exited (0) 3 minutes ago             pr_nginx_nginx_1
+```
+
+Si hubiese arrancado en modo background y por lo tanto no puedo hacer un `Ctrl + C`, hubiera utilizado el comando `docker-compose stop` para parar estos servicios.
+
+```console
+$ sudo docker-compose stop
+```
+
+Lo importante de este ejemplo es ver cómo funciona, para qué sirve los servicios, ver cómo se arrancan, ... Más adelante veremos ejemplos más sofisticados. 
