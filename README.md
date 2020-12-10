@@ -72,6 +72,7 @@
   - [6.3 Fichero docker-compose.yml](##-6.3-Fichero-docker-compose.yml)
   - [6.4 Mi primer proyecto Compose](##-6.4-Mi-primer-proyecto-Compose)
   - [6.5 Docker Compose enlazar contenedores, puertos y variables](##-6.5-Docker-Compose-enlazar-contenedores,-puertos-y-variables)
+  - [6.6 Diversos comandos de Docker Compose](##-6.6-Diversos-comandos-de-Docker-Compose)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -7720,7 +7721,7 @@ f79b96876cfa   none                   null      local
 5d6cede6837c   pr_nginx_default       bridge    local
 ```
 
-Vemos que el nombre de la red es el nombre del directorio seguido de _default. Más adelane veremos cómo podemos personalizar el nombre de la red.
+Vemos que el nombre de la red es el nombre del directorio seguido de '\_default'. Más adelane veremos cómo podemos personalizar el nombre de la red.
 
 Vamos a pararlo
 
@@ -7731,4 +7732,364 @@ Stopping compose-link_wordpress_1 ... done
 Stopping compose-link_dbserver_1  ... done
 ```
 
-Por cierto, los comandos de `docker-compose up` y `docker-compose stop` hay que ejecutarlos estando dentro del directorio donde se encuentra el fichero `docker-compose.yml`, sino dará error.
+## 6.6 Diversos comandos de Docker Compose
+
+Vamos a ver algunos de los comandos más habituales que se utilizan con `docker-compose` y ya veremos que son muy parecidos, incluso iguales a los equivalentes del comando `docker`.
+
+Vamos a ver los comandos que nos ofrece `docker-compose`
+
+```console
+$ sudo docker-compose 
+
+Define and run multi-container applications with Docker.
+
+Usage:
+  docker-compose [-f <arg>...] [options] [COMMAND] [ARGS...]
+  docker-compose -h|--help
+
+Options:
+  -f, --file FILE             Specify an alternate compose file
+                              (default: docker-compose.yml)
+  -p, --project-name NAME     Specify an alternate project name
+                              (default: directory name)
+  --verbose                   Show more output
+  --log-level LEVEL           Set log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+  --no-ansi                   Do not print ANSI control characters
+  -v, --version               Print version and exit
+  -H, --host HOST             Daemon socket to connect to
+
+  --tls                       Use TLS; implied by --tlsverify
+  --tlscacert CA_PATH         Trust certs signed only by this CA
+  --tlscert CLIENT_CERT_PATH  Path to TLS certificate file
+  --tlskey TLS_KEY_PATH       Path to TLS key file
+  --tlsverify                 Use TLS and verify the remote
+  --skip-hostname-check       Don't check the daemon's hostname against the
+                              name specified in the client certificate
+  --project-directory PATH    Specify an alternate working directory
+                              (default: the path of the Compose file)
+  --compatibility             If set, Compose will attempt to convert deploy
+                              keys in v3 files to their non-Swarm equivalent
+
+Commands:
+  build              Build or rebuild services
+  bundle             Generate a Docker bundle from the Compose file
+  config             Validate and view the Compose file
+  create             Create services
+  down               Stop and remove containers, networks, images, and volumes
+  events             Receive real time events from containers
+  exec               Execute a command in a running container
+  help               Get help on a command
+  images             List images
+  kill               Kill containers
+  logs               View output from containers
+  pause              Pause services
+  port               Print the public port for a port binding
+  ps                 List containers
+  pull               Pull service images
+  push               Push service images
+  restart            Restart services
+  rm                 Remove stopped containers
+  run                Run a one-off command
+  scale              Set number of containers for a service
+  start              Start services
+  stop               Stop services
+  top                Display the running processes
+  unpause            Unpause services
+  up                 Create and start containers
+  version            Show the Docker-Compose version information
+```
+
+Los comandos de `docker-compose` hay que ejecutarlos estando dentro del directorio donde se encuentra el fichero `docker-compose.yml`, sino dará error.
+
+Ya hemos visto algunos 
+
+**docker-compose up** 
+
+Crea y arranca los servicios / contenedores
+
+**docker-compose stop** 
+
+Para los servicios / contenedores.
+
+**docker-compose ps**
+
+```console
+$ sudo docker-compose ps
+
+          Name                        Command               State    Ports
+--------------------------------------------------------------------------
+compose-link_dbserver_1    docker-entrypoint.sh mysqld      Exit 0        
+compose-link_wordpress_1   docker-entrypoint.sh apach ...   Exit 0 
+```
+
+Nos da una información parecida a la que nos daba `docker`. Podemos ver que tenemos dos contenedores a partir de unas determinadas imágens y podemos ver que están parados.
+
+**docker-compose images**
+
+```console
+$ sudo docker-compose images
+
+       Container           Repository    Tag       Image Id      Size 
+----------------------------------------------------------------------
+compose-link_dbserver_1    mysql        5.7      ae0658fdbad5   428 MB
+compose-link_wordpress_1   wordpress    latest   0d35c2300ec8   520 MB
+```
+
+Nos permite ver las imágenes que estamos utilizando para cada uno de nuestros contenedores.
+
+**docker-compose config**
+
+Valida nuestro fichero docker-compose.yml y nos dice si es correcto. Si no da ningún error es que es correcto.
+
+```console
+$ sudo docker-compose config
+
+services:
+  dbserver:
+    environment:
+      MYSQL_ROOT_PASSWORD: mysqlpw
+    image: mysql:5.7
+    ports:
+    - 3306:3306/tcp
+  wordpress:
+    depends_on:
+    - dbserver
+    environment:
+      WORDPRESS_DB_HOST: dbserver:3306
+      WORDPRESS_DB_PASSWORD: mysqlpw
+    image: wordpress
+    ports:
+    - 80:80/tcp
+version: '3.0'
+```
+
+Puedo poner la opción `-q` para que sólo me saque si ha habido o no algún error
+
+```console
+$ sudo docker-compose config -q
+
+```
+
+Como ocurría con el comando `docker`, cuando pongo la opción `--help` en cualquier comando, me muestra la ayuda de ese comando.
+
+```console
+$ sudo docker-compose config --help
+
+Validate and view the Compose file.
+
+Usage: config [options]
+
+Options:
+    --resolve-image-digests  Pin image tags to digests.
+    -q, --quiet              Only validate the configuration, don't print
+                             anything.
+    --services               Print the service names, one per line.
+    --volumes                Print the volume names, one per line.
+```
+
+Entonces si pongo 
+
+```console
+$ sudo docker-compose config --services
+
+dbserver
+wordpress
+```
+
+Sólo me muestra los servicios que tiene el fichero `docker-compose.yml`
+
+Vamos a modificar el fichero `docker-compose.yml` y vamos a introducir un fallo, por ejemplo, vamos a quitar los dos puntos que hay detrás del servicio wordpress.
+
+```console
+$ sudo docker-compose config
+
+ERROR: yaml.scanner.ScannerError: mapping values are not allowed here
+  in "./docker-compose.yml", line 4, column 10
+```
+
+Vemos que me genera un error.
+
+**docker-compose start**
+
+Lo que hace es arrancar los servicios / contenedores que están parados.
+
+Como yo los tengo parados, pues vamos a arrancarlos
+
+```console
+$ sudo docker-compose start
+
+Starting dbserver  ... done
+Starting wordpress ... done
+```
+
+Es muy importante ejecutarlo dentro del directorio donde está el `docker-compose.yml` porque yo puedo tener varios servicios de varios `docker-compose.yml` diferentes.
+
+Si ahora hago 
+
+```console
+$ sudo docker-compose ps
+
+         Name                   Command           State           Ports         
+--------------------------------------------------------------------------------
+compose-                 docker-entrypoint.sh     Up      0.0.0.0:3306->3306/tcp
+link_dbserver_1          mysqld                           , 33060/tcp           
+compose-                 docker-entrypoint.sh     Up      0.0.0.0:80->80/tcp    
+link_wordpress_1         apach ... 
+```
+
+Vemos que están arrancados y la información de los puertos.
+
+Ni que decir tiene que también los podemos ver con `docker ps`
+
+```console
+$ sudo docker ps
+
+CONTAINER ID   IMAGE       COMMAND                  CREATED       STATUS         PORTS                               NAMES
+60afe014debd   wordpress   "docker-entrypoint.s…"   2 hours ago   Up 3 minutes   0.0.0.0:80->80/tcp                  compose-link_wordpress_1
+9409b7fdf6a8   mysql:5.7   "docker-entrypoint.s…"   2 hours ago   Up 3 minutes   0.0.0.0:3306->3306/tcp, 33060/tcp   compose-link_dbserver_1
+```
+
+Recordemos que Docker Compose no es más que un frontal, una forma de hacer más sencillo el trabajo de orquestación entre contenedores, pero por debajo sigo teniendo Docker. Por lo que tenemos la opción de hacerlo de las dos maneras.
+
+**docker-compose logs**
+
+Nos muestra el log de un deteminado servicio / contenedor.
+
+```console
+$ sudo docker-compose logs dbserver
+
+...
+dbserver_1   | 2020-12-10T13:20:25.968532Z 0 [Note] Server hostname (bind-address): '*'; port: 3306
+dbserver_1   | 2020-12-10T13:20:25.968585Z 0 [Note] IPv6 is available.
+dbserver_1   | 2020-12-10T13:20:25.968599Z 0 [Note]   - '::' resolves to '::';
+dbserver_1   | 2020-12-10T13:20:25.968618Z 0 [Note] Server socket created on IP: '::'.
+dbserver_1   | 2020-12-10T13:20:25.970587Z 0 [Warning] Insecure configuration for --pid-file: Location '/var/run/mysqld' in the path is accessible to all OS users. Consider choosing a different directory.
+dbserver_1   | 2020-12-10T13:20:25.979533Z 0 [Note] Event Scheduler: Loaded 0 events
+dbserver_1   | 2020-12-10T13:20:25.979747Z 0 [Note] mysqld: ready for connections.
+dbserver_1   | Version: '5.7.32'  socket: '/var/run/mysqld/mysqld.sock'  port: 3306  MySQL Community Server (GPL)
+```
+
+**docker-compose top**
+
+Me indica los procesos más pesados de un servicio / contenedor.
+
+```console
+$ sudo docker-compose top wordpress
+ 
+compose-link_wordpress_1
+  UID       PID    PPID    C   STIME   TTY     TIME             CMD         
+----------------------------------------------------------------------------
+root       13277   13241   0   14:20   ?     00:00:00   apache2 -DFOREGROUND
+www-data   13450   13277   0   14:20   ?     00:00:00   apache2 -DFOREGROUND
+www-data   13451   13277   0   14:20   ?     00:00:00   apache2 -DFOREGROUND
+www-data   13452   13277   0   14:20   ?     00:00:00   apache2 -DFOREGROUND
+www-data   13453   13277   0   14:20   ?     00:00:00   apache2 -DFOREGROUND
+www-data   13454   13277   0   14:20   ?     00:00:00   apache2 -DFOREGROUND
+```
+
+**docker-compose pause**
+
+Me permite parar temporalmente mis servicios
+
+```console
+$ sudo docker-compose pause
+
+Pausing compose-link_dbserver_1  ... done
+Pausing compose-link_wordpress_1 ... done
+```
+
+Si hago 
+
+```console
+$ sudo docker-compose ps
+
+         Name                   Command           State            Ports        
+--------------------------------------------------------------------------------
+compose-                 docker-entrypoint.sh     Paused   0.0.0.0:3306->3306/tc
+link_dbserver_1          mysqld                            p, 33060/tcp         
+compose-                 docker-entrypoint.sh     Paused   0.0.0.0:80->80/tcp   
+link_wordpress_1         apach ...   
+```
+
+Me aparecen como pausados
+
+**docker-compose unpause**
+
+Me permite reaunudar servicios pausados
+
+```console
+$ sudo docker-compose unpause
+
+Unpausing compose-link_wordpress_1 ... done
+Unpausing compose-link_dbserver_1  ... done
+```
+
+Y si hago
+
+```console
+$ sudo docker-compose ps
+
+         Name                   Command           State           Ports         
+--------------------------------------------------------------------------------
+compose-                 docker-entrypoint.sh     Up      0.0.0.0:3306->3306/tcp
+link_dbserver_1          mysqld                           , 33060/tcp           
+compose-                 docker-entrypoint.sh     Up      0.0.0.0:80->80/tcp    
+link_wordpress_1         apach ... 
+```
+
+Puedo ver que ya están otra vez funcionando.
+
+**docker-compose restart**
+
+Reinicia los servidores
+
+```console
+$ sudo docker-compose restart
+
+Restarting compose-link_wordpress_1 ... done
+Restarting compose-link_dbserver_1  ... done
+```
+
+Vamos a parar los servicios
+
+```console
+$ sudo docker-compose stop
+
+Stopping compose-link_wordpress_1 ... done
+Stopping compose-link_dbserver_1  ... done
+```
+
+**docker-compose rm**
+
+Borra servicios
+
+```console
+$ sudo docker-compose rm
+
+Going to remove compose-link_wordpress_1, compose-link_dbserver_1
+Are you sure? [yN] y
+Removing compose-link_wordpress_1 ... done
+Removing compose-link_dbserver_1  ... done
+```
+
+Ahora si yo quisiera lanzarlos de nuevo, tendría que regenerarlos
+
+```console
+$ sudo docker-compose up
+
+$ sudo docker-compose up
+Creating compose-link_dbserver_1 ... done
+Creating compose-link_wordpress_1 ... done
+Attaching to compose-link_dbserver_1, compose-link_wordpress_1
+dbserver_1   | 2020-12-10 14:00:05+00:00 [Note] [Entrypoint]: Entrypoint script for MySQL Server 5.7.32-1debian10 started.
+dbserver_1   | 2020-12-10 14:00:05+00:00 [Note] [Entrypoint]: Switching to dedicated user 'mysql'
+dbserver_1   | 2020-12-10 14:00:05+00:00 [Note] [Entrypoint]: Entrypoint script for MySQL Server 5.7.32-1debian10 started.
+dbserver_1   | 2020-12-10 14:00:05+00:00 [Note] [Entrypoint]: Initializing database files
+dbserver_1   | 2020-12-10T14:00:05.817294Z 0 [Warning] TIMESTAMP with implicit DEFAULT value is deprecated. Please use --explicit_defaults_for_timestamp server option (see documentation for more details).
+dbserver_1   | 2020-12-10T14:00:06.231725Z 0 [Warning] InnoDB: New log files created, LSN=45790
+dbserver_1   | 2020-12-10T14:
+
+...
+```
+
+Si los borro y los vuelvo a crear, empieza de cero, ya que como ocurría en Docker, al borrar los contenedores con `docker rm` y volver a crearlos con `docker run`, los vuelve a crear desde cero, por lo que si tuviese algún contenido o modificación, se perdería.
