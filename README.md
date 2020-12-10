@@ -73,6 +73,7 @@
   - [6.4 Mi primer proyecto Compose](##-6.4-Mi-primer-proyecto-Compose)
   - [6.5 Docker Compose enlazar contenedores, puertos y variables](##-6.5-Docker-Compose-enlazar-contenedores,-puertos-y-variables)
   - [6.6 Diversos comandos de Docker Compose](##-6.6-Diversos-comandos-de-Docker-Compose)
+  - [6.7 Volúmenes en Docker Compose](##-6.7-Volúmenes-en-Docker-Compose)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -8093,3 +8094,195 @@ dbserver_1   | 2020-12-10T14:
 ```
 
 Si los borro y los vuelvo a crear, empieza de cero, ya que como ocurría en Docker, al borrar los contenedores con `docker rm` y volver a crearlos con `docker run`, los vuelve a crear desde cero, por lo que si tuviese algún contenido o modificación, se perdería.
+
+## 6.7 Volúmenes en Docker Compose
+
+Los volúmenes es un concepto de la arquitectura de Docker que me permiten compartir datos persistentes entre contenedores y el host principal.
+
+Los volúmenes en Docker Compose funcionan exactamente igual que en el Docker normal, sólo se diferencia es en los comandos para gestionarlos y la forma de gestionarlos.
+
+Vamos a hacer un ejemplo
+
+Primero vamos a ver los volúmenes que tenemos
+
+```console
+$ sudo docker volume ls
+
+DRIVER    VOLUME NAME
+local     1530b5096c571859951461f133899b528630d9b3a03341f0a7681ae6f8d7903e
+local     b5a46c53d3d3ff96ebe8999ccf3a7f3ab96f1eaba152171d9bc29b851442548d
+local     d9a5fe1fca448f4dedcc7d9ad422527736af83400869e85c343ba8f7ce3e60ca
+```
+
+Creamos el directorio example-volumes
+
+```console
+$ mkdir example-volumes
+```
+
+Y dentro creamos el fichero `docker-compose.yml`
+
+```yml
+version: "3.2"
+services:
+  web:
+    image: nginx:alpine
+    volumes:
+      - type: volume
+        source: mydata
+        target: /data
+        volume:
+          nocopy: true
+      - type: bind
+        source: ./static
+        target: /opt/app/static
+    ports:
+      - 80:80
+  db:
+    image: postgres:latest
+    volumes:
+      - "/var/run/postgres/postgres.sock:/var/run/postgres/postgres.sock"
+      - "dbdata:/var/lib/postgresql/data"
+
+volumes:
+  mydata:
+  dbdata:
+```
+
+El bloque **volumes** se utiliza para declarar los volúmenes dentro del contenedor.
+
+La propiedad **type** indica el tipo del volumen, si es de tipo **volume** o de tipo **bind**.
+
+La diferencia es que los volúmenes de tipo **volume** crean el volumen en el directorio */var/lib/docker/volumes/...* y los volúmenes de tipo **bind** asocian un directorio de la máquina host con un directorio del contenedor.
+
+Entonces, en nuestro `docker-compose.yml`, en el primer caso estamos declarando un volumen llamado *mydata*, definido en la propiedad **source**, que está asociado al directorio del contenedor */data*, definido en la propiedad **target**.
+
+La propiedad **volume** contiene directivas que podemos aplicar al volumen, como `nocopy: true` para que no copie el contenido. 
+
+En el segundo caso, en volumen de tipo **bind**, tenemos el **source**, que indica que en el directorio de la máquina host donde está el `docker-compose.yml` habrá un directorio llamado *static* y que estará mapeado o asociado con el directorio */opt/app/static* del contenedor definido en la propiedad **target**.
+
+Entonces, en el primer servicio en el primer caso creamos un volúmen como tal y en el segundo caso se crea una asociación.
+
+Y en el segundo servicio, vemos otra manera de declarar volúmenes. En el primer caso estamos mapeando un socket de la máquina principal con un socket del contenedor.
+
+Cuando vimos el capítulo de los volúmenes vimos que se podía utilizar esa nomenclatura, *"sitio de la máquina principal":"sitio del contenedor"* y que además de compartir volúmenes o directorios, también podíamos compartir sockets.
+
+Y luego tenemos otro volumen llamado *dbdata* que está mapeado con el directorio */var/lib/postgresql/data* del contenedor.
+
+Y por último tenemos el bloque llamado **volumes** en el que declaramos los volúmenes que hemos creado para confirmar que son volúmenes.
+
+Tenemos el *mydata* y el *dbdata*, los otros dos no porque uno es un bind de un directorio con otro directorio y el otro es un bind de un socket.
+
+Vamos a ver cómo funciona
+
+Vamos a arrancar los servicios
+
+```console
+$ sudo docker-compose up
+```
+
+Y vamos a comprobar que se han creado los volúmenes
+
+```console
+$ sudo docker volume ls
+
+DRIVER    VOLUME NAME
+local     1530b5096c571859951461f133899b528630d9b3a03341f0a7681ae6f8d7903e
+local     b5a46c53d3d3ff96ebe8999ccf3a7f3ab96f1eaba152171d9bc29b851442548d
+local     d9a5fe1fca448f4dedcc7d9ad422527736af83400869e85c343ba8f7ce3e60ca
+local     example-volumes_dbdata
+local     example-volumes_mydata
+```
+
+Vemos que ahí están los dos volúmenes y que se llaman como le hemos dicho con el nombre del directorio delante.
+
+Ahora vamos a comprobar el **bind** del directorio static y vamos a crear un fichero dentro
+
+```console
+$ cd static
+$ touch fichero.txt 
+```
+
+Y ahora vamos a ver lo que hay dentro del contenedor, entonces para ver los nombres de los servicios
+
+```console
+$ sudo docker-compose config --services
+
+web
+db
+```
+
+Entramos al contenedor. Para entrar hay que poner `sh` en vez de `bash` porque alpine no tiene *bash*, tiene *shell*
+
+```console
+$ sudo docker-compose exec web sh
+
+/ # cd opt/app/static/
+/opt/app/static # ls
+fichero.txt
+/opt/app/static # 
+```
+
+Entonces como vemos el uso de contenedores y sus volúmenes es muy similar al que podemos usar con Docker normal, de hecho, como hemos dicho que Docker Compose es un frontal, pues por debajo lo que está usando son comandos Docker.
+
+Vamos a salirnos del contenedor
+
+```console
+/ # exix
+```
+
+Y ahora vamos a usar
+
+```console
+$ sudo docker-compose down
+
+Stopping example-volumes_db_1  ... done
+Stopping example-volumes_web_1 ... done
+Removing example-volumes_db_1  ... done
+Removing example-volumes_web_1 ... done
+Removing network example-volumes_default
+```
+
+**down** es lo contrario de **up**, lo que hace es que para todos los servicios y además borra los servicios, los contenedores, los volúmenes y las redes.
+
+Si miro los volúmenes que tengo
+
+```console
+$ sudo docker volume ls
+
+DRIVER    VOLUME NAME
+local     1530b5096c571859951461f133899b528630d9b3a03341f0a7681ae6f8d7903e
+local     b5a46c53d3d3ff96ebe8999ccf3a7f3ab96f1eaba152171d9bc29b851442548d
+local     d9a5fe1fca448f4dedcc7d9ad422527736af83400869e85c343ba8f7ce3e60ca
+local     example-volumes_dbdata
+local     example-volumes_mydata
+```
+
+Me encuentro que aún están ahí, y eso es porque cuando un volumen, cuando ya no le apunta ningún contenedor se queda huérfano y hay que hacer un **prune**
+
+```console
+$ sudo docker volume prune
+
+WARNING! This will remove all local volumes not used by at least one container.
+Are you sure you want to continue? [y/N] y
+Deleted Volumes:
+example-volumes_dbdata
+example-volumes_mydata
+
+Total reclaimed space: 0B
+```
+
+Si volvemos a mirar
+
+```console
+$ sudo docker volume ls
+
+DRIVER    VOLUME NAME
+local     1530b5096c571859951461f133899b528630d9b3a03341f0a7681ae6f8d7903e
+local     b5a46c53d3d3ff96ebe8999ccf3a7f3ab96f1eaba152171d9bc29b851442548d
+local     d9a5fe1fca448f4dedcc7d9ad422527736af83400869e85c343ba8f7ce3e60ca
+```
+
+Vemos que ya no están.
+
+Entonces vemos que la gestión de volúmenes en Docker Compose es muy similar a como se gestionan en Docker normal.
