@@ -71,6 +71,7 @@
   - [6.2 Instalar Docker Compose](##-6.2-Instalar-Docker-Compose)
   - [6.3 Fichero docker-compose.yml](##-6.3-Fichero-docker-compose.yml)
   - [6.4 Mi primer proyecto Compose](##-6.4-Mi-primer-proyecto-Compose)
+  - [6.5 Enlazar servicios. Puertos y variables](##-6.5-Enlazar-servicios.-Puertos-y-variables)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -7564,3 +7565,6 @@ Lo importante de este ejemplo es ver cómo funciona, para qué sirve los servici
 
 **Ejercicio Práctico:**
 > Práctica 18 - Práctica 18 - Crear un Docker Compose básico.pdf
+
+## 6.5 Enlazar servicios. Puertos y variables
+
