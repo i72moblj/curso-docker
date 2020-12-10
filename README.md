@@ -71,7 +71,7 @@
   - [6.2 Instalar Docker Compose](##-6.2-Instalar-Docker-Compose)
   - [6.3 Fichero docker-compose.yml](##-6.3-Fichero-docker-compose.yml)
   - [6.4 Mi primer proyecto Compose](##-6.4-Mi-primer-proyecto-Compose)
-  - [6.5 Enlazar servicios. Puertos y variables](##-6.5-Enlazar-servicios.-Puertos-y-variables)
+  - [6.5 Docker Compose enlazar contenedores, puertos y variables](##-6.5-Docker-Compose-enlazar-contenedores,-puertos-y-variables)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -7275,7 +7275,7 @@ services:
   nginx:
     image: nginx
     ports:
-    - "80:80"
+      - "80:80"
 ```
 
 Como vemos, utiliza la versión 3 de Docker Compose y define un único servicio que va a ser nginx, y al poner el atributo image, va a utilizar la imagen nginx tomándola del repositorio local o descargándola de Docker Hub. Y luego va a mapear el puerto 80 de la máquina host con el puerto 80 del contenedor o servicio.
@@ -7566,5 +7566,169 @@ Lo importante de este ejemplo es ver cómo funciona, para qué sirve los servici
 **Ejercicio Práctico:**
 > Práctica 18 - Práctica 18 - Crear un Docker Compose básico.pdf
 
-## 6.5 Enlazar servicios. Puertos y variables
+## 6.5 Docker Compose enlazar contenedores, puertos y variables
 
+En el capítulo anterior hemos visto cómo podemos lanzar un único contenedor a partir de un fichero `docker-compose.yml` y ahora vamos a ver cómo podemos unir y trabajar con varios contenedores al mismo tiempo, ya que la filosofía de Docker Compose se basa en orquestar una arquitectura de microservicios / contenedores.
+
+Vamos a retomar un ejemplo que ya hicimos en el capítulo de enlazar contenedores, que es enlazar un contenedor WordPress con un contenedor MySQL. Como ya sabemos hacerlo manualmente, sólo con docker, ahora vamos a ver cómo hacerlo con Docker Compose.
+
+El archivo docker-compose.yml
+
+```yml
+version: '3'
+services:
+  wordpress:
+    image: wordpress
+    environment:
+      WORDPRESS_DB_HOST: dbserver:3306
+      WORDPRESS_DB_PASSWORD: mysqlpw
+    ports:
+      - 80:80
+    depends_on:
+      - dbserver
+  dbserver:
+    image: mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: mysqlpw
+    ports:
+      - 3306:3306
+```
+
+Vamos a comentarlo línea a línea
+
+**version** ya hemos visto que es la versión de docker-compose correspondiente a la versión de docker.
+
+**services** Contiene los microservicios o contenedores que van a formar parte de nuestra arquitectura de microservicios.
+
+Tenemos dos servicios, *wordpress* y *dbserver*. Los servicios no tienen por qué llamarse igual que la imagen con la que vamos a trabajar, sino que debe ser algo descriptivo para que cuando lo leamos sepamos de qué se trata.
+
+**image** ya la hemos visto, dijimos que todos los servicios deben tener **image** o **build**, es decir, o bien descargarnos una imagen o bien construir una imagen a partir de un fichero Dockerfile
+
+**environment** son las variables que se le pasaban al hacer `docker run` con la opción `-e`. Dentro del bloque **environment** ponemos las variables que queremos definir. En este caso pasamos el nombre del servidor, *dbserver* y el puerto *3306*, que es el puerto por el que escucha MySQL y también le pasamos la password que utilizamos para crear el usuario de la base de datos.
+
+**ports** se comporta igual que cuando en el `docker run` ponemos la opción `-p`. Define el mapeo del puerto de la máquina host con el puerto del contenedor. En este caso el WordPress va a escuchar por el puerto 80 de nuestra máquina host.
+
+**depends_on** le dice a docker-compose cómo debería arrancar los contenedores. En este caso lo que le estamos diciendo es que para que *wordpress* funcione depende de que primeramente funcione *dbserver*. Entonces Docker Compose arrancará primero el contenedor *dbserver* y después el contenedor *wordpress*.
+
+En el contenedor *dbserver*, la imagen es mysql:5.7 y en el environment, mysql require al menos que se le pase la contraseña del usuario root. Y esa contraseña tiene que coincidir con la contraseña que utilizará el servicio / contenedor *wordpress*. Y se definen los puertos, que también se ve reflejado en el *wordpress*.
+
+Vemos que no hemos tenido que especificar la red, y eso es porque Docker Compose crea automáticamente una red personalizada para nuestro Docker Compose. Y por lo tanto los contenedores *wordpress* y *dbserver* se van a ver dentro de la red.
+
+Vamos a lanzarlo
+
+```console
+$ sudo docker-compose up
+
+Starting compose-link_dbserver_1 ... done
+Recreating compose-link_wordpress_1 ... done
+Attaching to compose-link_dbserver_1, compose-link_wordpress_1
+dbserver_1   | 2020-12-10 11:49:45+00:00 [Note] [Entrypoint]: Entrypoint script for MySQL Server 5.7.32-1debian10 started.
+dbserver_1   | 2020-12-10 11:49:45+00:00 [Note] [Entrypoint]: Switching to dedicated user 'mysql'
+dbserver_1   | 2020-12-10 11:49:45+00:00 [Note] [Entrypoint]: Entrypoint script for MySQL Server 5.7.32-1debian10 started.
+dbserver_1   | 2020-12-10T11:49:45.822023Z 0 [Warning] TIMESTAMP with implicit DEFAULT value is deprecated. Please use --explicit_defaults_for_timestamp server option (see documentation for more details).
+dbserver_1   | 2020-12-10T11:49:45.824088Z 0 [Note] mysqld (mysqld 5.7.32) starting as process 1 ...
+dbserver_1   | 2020-12-10T11:49:45.828544Z 0 [Note] InnoDB: PUNCH HOLE support available
+dbserver_1   | 2020-12-10T11:49:45.828570Z 0 [Note] InnoDB: Mutexes and rw_locks use GCC atomic builtins
+dbserver_1   | 2020-12-10T11:49:45.828576Z 0 [Note] InnoDB: Uses event mutexes
+dbserver_1   | 2020-12-10T11:49:45.828581Z 0 [Note] InnoDB: GCC builtin __atomic_thread_fence() is used for memory barrier
+dbserver_1   | 2020-12-10T11:49:45.828586Z 0 [Note] InnoDB: Compressed tables use zlib 1.2.11
+dbserver_1   | 2020-12-10T11:49:45.828591Z 0 [Note] InnoDB: Using Linux native AIO
+dbserver_1   | 2020-12-10T11:49:45.829017Z 0 [Note] InnoDB: Number of pools: 1
+dbserver_1   | 2020-12-10T11:49:45.829159Z 0 [Note] InnoDB: Using CPU crc32 instructions
+dbserver_1   | 2020-12-10T11:49:45.831524Z 0 [Note] InnoDB: Initializing buffer pool, total size = 128M, instances = 1, chunk size = 128M
+dbserver_1   | 2020-12-10T11:49:45.847385Z 0 [Note] InnoDB: Completed initialization of buffer pool
+dbserver_1   | 2020-12-10T11:49:45.850821Z 0 [Note] InnoDB: If the mysqld execution user is authorized, page cleaner thread priority can be changed. See the man page of setpriority().
+dbserver_1   | 2020-12-10T11:49:45.863158Z 0 [Note] InnoDB: Highest supported file format is Barracuda.
+dbserver_1   | 2020-12-10T11:49:45.871871Z 0 [Note] InnoDB: Creating shared tablespace for temporary tables
+dbserver_1   | 2020-12-10T11:49:45.871958Z 0 [Note] InnoDB: Setting file './ibtmp1' size to 12 MB. Physically writing the file full; Please wait ...
+dbserver_1   | 2020-12-10T11:49:45.908923Z 0 [Note] InnoDB: File './ibtmp1' size is now 12 MB.
+dbserver_1   | 2020-12-10T11:49:45.909541Z 0 [Note] InnoDB: 96 redo rollback segment(s) found. 96 redo rollback segment(s) are active.
+dbserver_1   | 2020-12-10T11:49:45.909552Z 0 [Note] InnoDB: 32 non-redo rollback segment(s) are active.
+dbserver_1   | 2020-12-10T11:49:45.910153Z 0 [Note] InnoDB: 5.7.32 started; log sequence number 12617797
+dbserver_1   | 2020-12-10T11:49:45.910396Z 0 [Note] InnoDB: Loading buffer pool(s) from /var/lib/mysql/ib_buffer_pool
+dbserver_1   | 2020-12-10T11:49:45.910511Z 0 [Note] Plugin 'FEDERATED' is disabled.
+dbserver_1   | 2020-12-10T11:49:45.911936Z 0 [Note] InnoDB: Buffer pool(s) load completed at 201210 11:49:45
+dbserver_1   | 2020-12-10T11:49:45.915316Z 0 [Note] Found ca.pem, server-cert.pem and server-key.pem in data directory. Trying to enable SSL support using them.
+dbserver_1   | 2020-12-10T11:49:45.915330Z 0 [Note] Skipping generation of SSL certificates as certificate files are present in data directory.
+dbserver_1   | 2020-12-10T11:49:45.916083Z 0 [Warning] CA certificate ca.pem is self signed.
+dbserver_1   | 2020-12-10T11:49:45.916113Z 0 [Note] Skipping generation of RSA key pair as key files are present in data directory.
+dbserver_1   | 2020-12-10T11:49:45.916749Z 0 [Note] Server hostname (bind-address): '*'; port: 3306
+dbserver_1   | 2020-12-10T11:49:45.916820Z 0 [Note] IPv6 is available.
+dbserver_1   | 2020-12-10T11:49:45.916853Z 0 [Note]   - '::' resolves to '::';
+dbserver_1   | 2020-12-10T11:49:45.916871Z 0 [Note] Server socket created on IP: '::'.
+dbserver_1   | 2020-12-10T11:49:45.918897Z 0 [Warning] Insecure configuration for --pid-file: Location '/var/run/mysqld' in the path is accessible to all OS users. Consider choosing a different directory.
+dbserver_1   | 2020-12-10T11:49:45.927517Z 0 [Note] Event Scheduler: Loaded 0 events
+dbserver_1   | 2020-12-10T11:49:45.927747Z 0 [Note] mysqld: ready for connections.
+dbserver_1   | Version: '5.7.32'  socket: '/var/run/mysqld/mysqld.sock'  port: 3306  MySQL Community Server (GPL)
+wordpress_1  | AH00558: apache2: Could not reliably determine the server's fully qualified domain name, using 172.19.0.3. Set the 'ServerName' directive globally to suppress this message
+wordpress_1  | AH00558: apache2: Could not reliably determine the server's fully qualified domain name, using 172.19.0.3. Set the 'ServerName' directive globally to suppress this message
+wordpress_1  | [Thu Dec 10 11:49:46.493133 2020] [mpm_prefork:notice] [pid 1] AH00163: Apache/2.4.38 (Debian) PHP/7.4.13 configured -- resuming normal operations
+wordpress_1  | [Thu Dec 10 11:49:46.493184 2020] [core:notice] [pid 1] AH00094: Command line: 'apache2 -D FOREGROUND'
+wordpress_1  | 172.19.0.1 - - [10/Dec/2020:11:50:11 +0000] "GET / HTTP/1.1" 302 400 "-" "Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0"
+wordpress_1  | 172.19.0.1 - - [10/Dec/2020:11:50:11 +0000] "GET /wp-admin/install.php HTTP/1.1" 200 4487 "-" "Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0"
+wordpress_1  | 172.19.0.1 - - [10/Dec/2020:11:50:12 +0000] "GET /wp-includes/css/buttons.min.css?ver=5.5.3 HTTP/1.1" 200 1789 "http://localhost/wp-admin/install.php" "Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0"
+wordpress_1  | 172.19.0.1 - - [10/Dec/2020:11:50:12 +0000] "GET /wp-admin/js/language-chooser.min.js?ver=5.5.3 HTTP/1.1" 200 618 "http://localhost/wp-admin/install.php" "Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0"
+wordpress_1  | 172.19.0.1 - - [10/Dec/2020:11:50:12 +0000] "GET /wp-admin/css/install.min.css?ver=5.5.3 HTTP/1.1" 200 2125 "http://localhost/wp-admin/install.php" "Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0"
+wordpress_1  | 172.19.0.1 - - [10/Dec/2020:11:50:12 +0000] "GET /wp-admin/css/forms.min.css?ver=5.5.3 HTTP/1.1" 200 6351 "http://localhost/wp-admin/install.php" "Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0"
+wordpress_1  | 172.19.0.1 - - [10/Dec/2020:11:50:12 +0000] "GET /wp-admin/css/l10n.min.css?ver=5.5.3 HTTP/1.1" 200 1021 "http://localhost/wp-admin/install.php" "Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0"
+wordpress_1  | 172.19.0.1 - - [10/Dec/2020:11:50:12 +0000] "GET /wp-includes/css/dashicons.min.css?ver=5.5.3 HTTP/1.1" 200 36060 "http://localhost/wp-admin/install.php" "Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0"
+wordpress_1  | 172.19.0.1 - - [10/Dec/2020:11:50:12 +0000] "GET /wp-includes/js/jquery/jquery.js?ver=1.12.4-wp HTTP/1.1" 200 34130 "http://localhost/wp-admin/install.php" "Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0"
+wordpress_1  | 172.19.0.1 - - [10/Dec/2020:11:50:13 +0000] "GET /wp-admin/images/wordpress-logo.svg?ver=20131107 HTTP/1.1" 200 1810 "http://localhost/wp-admin/css/install.min.css?ver=5.5.3" "Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0"
+wordpress_1  | 172.19.0.1 - - [10/Dec/2020:11:50:13 +0000] "GET /wp-admin/images/spinner.gif HTTP/1.1" 200 3941 "http://localhost/wp-admin/css/install.min.css?ver=5.5.3" "Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0"
+wordpress_1  | 127.0.0.1 - - [10/Dec/2020:11:50:18 +0000] "OPTIONS * HTTP/1.0" 200 126 "-" "Apache/2.4.38 (Debian) PHP/7.4.13 (internal dummy connection)"
+wordpress_1  | 127.0.0.1 - - [10/Dec/2020:11:50:19 +0000] "OPTIONS * HTTP/1.0" 200 126 "-" "Apache/2.4.38 (Debian) PHP/7.4.13 (internal dummy connection)"
+```
+
+Vamos a comprobar que lo tenemos funcionando
+
+[http://localhost:80](http://localhost:80)
+
+Vamos a ver los servicios / contenedores
+
+```console
+$ sudo docker-compose ps
+
+[sudo] password for jesus: 
+          Name                        Command               State                 Ports              
+-----------------------------------------------------------------------------------------------------
+compose-link_dbserver_1    docker-entrypoint.sh mysqld      Up      0.0.0.0:3306->3306/tcp, 33060/tcp
+compose-link_wordpress_1   docker-entrypoint.sh apach ...   Up      0.0.0.0:80->80/tcp
+```
+
+Vamos a ver las imágenes
+
+```console
+$ sudo docker-compose images
+
+       Container           Repository    Tag       Image Id      Size 
+----------------------------------------------------------------------
+compose-link_dbserver_1    mysql        5.7      ae0658fdbad5   428 MB
+compose-link_wordpress_1   wordpress    latest   0d35c2300ec8   520 MB
+```
+
+Y vamos a ver la red
+
+```console
+$ sudo docker network ls
+
+NETWORK ID     NAME                   DRIVER    SCOPE
+6d67e4700dea   bridge                 bridge    local
+a56d29772b45   compose-link_default   bridge    local
+3a20f1d565d9   development_default    bridge    local
+774c8fbbcfaf   host                   host      local
+f79b96876cfa   none                   null      local
+5d6cede6837c   pr_nginx_default       bridge    local
+```
+
+Vemos que el nombre de la red es el nombre del directorio seguido de _default. Más adelane veremos cómo podemos personalizar el nombre de la red.
+
+Vamos a pararlo
+
+```console
+$ sudo docker-compose stop
+
+Stopping compose-link_wordpress_1 ... done
+Stopping compose-link_dbserver_1  ... done
+```
+
+Por cierto, los comandos de `docker-compose up` y `docker-compose stop` hay que ejecutarlos estando dentro del directorio donde se encuentra el fichero `docker-compose.yml`, sino dará error.
