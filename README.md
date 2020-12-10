@@ -7293,7 +7293,19 @@ $ sudo docker-compose up -d
 
 Normalmente el comando `docker-compose` se lanzará en modo background, aunque en este caso no la queremos en modo background, sino en modo interactivo para que me presente un log de lo que va haciendo, porque que en modo background no muestra nada.
 
-Vamos a lanzarlo:
+Si los contenedores / servicios que quiero lanzar a través de una imagen construida, atributo **image**, se lanzaran a partir de un Dockerfile, atributo **build**, tendríamos que añadir la opción `--build` al comando docker-compose para construir la imagen. Una vez construida sí que podemos omitir la opción `--build` a no ser que queramos reconstruir la imagen si hemos hecho algún cambio en el fichero Dockerfile.
+
+```console
+$ sudo docker-compose up --build
+```
+
+o en background: 
+
+```console
+$ sudo docker-compose up --build -d
+```
+
+Vamos a lanzar nuestro ejemplo:
 
 ```console
 $ sudo docker-compose up
@@ -7549,3 +7561,6 @@ $ sudo docker-compose stop
 ```
 
 Lo importante de este ejemplo es ver cómo funciona, para qué sirve los servicios, ver cómo se arrancan, ... Más adelante veremos ejemplos más sofisticados. 
+
+**Ejercicio Práctico:**
+> Práctica 18 - Práctica 18 - Crear un Docker Compose básico.pdf
