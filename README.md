@@ -75,6 +75,7 @@
   - [6.6 Diversos comandos de Docker Compose](##-6.6-Diversos-comandos-de-Docker-Compose)
   - [6.7 Volúmenes en Docker Compose](##-6.7-Volúmenes-en-Docker-Compose)
   - [6.8 Redes en Docker Compose](##-6.8-Redes-en-Docker-Compose)
+  - [6.9 Cambiar nombre del fichero Compose](## 6.9 Cambiar nombre del fichero Compose)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -8428,3 +8429,120 @@ Removing network compose-network_net3
 
 **Ejercicio Práctico:**
 > Práctica 19 - Docker Compose MEAN Stack.pdf
+
+## 6.9 Cambiar nombre del fichero Compose
+
+Vamos a ver cómo podemos modificar tanto el nombre del proyecto o entorno que estamos utilizando para ejecutar `docker-compose` como también el fichero.
+
+La opción `-f` me permite que el fichero con el cual queremos construir nuestra orquestación no se tenga que llamar *Docker-compose.yml*.
+
+La opción `-p` me permite cambiar el nombre del proyecto, ya que por defecto se utiliza el nombre del directorio.
+
+Vamos a ver un ejemplo basado en el Docker Compose del WordPress con MySQL
+
+Vamos a crear el directorio compose-wp-mysql
+
+```console
+$ mkdir compose-wp-mysql
+```
+
+Vamos a ver el fichero `docker-compose.yml`
+
+```yml
+version: '3'
+services:
+  wordpress:
+    image: wordpress
+    environment:
+      WORDPRESS_DB_HOST: dbserver:3306
+      WORDPRESS_DB_PASSWORD: mysqlpw
+    ports:
+      - 80:80
+    depends_on:
+      - dbserver
+  dbserver:
+    image: mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: mysqlpw
+    ports:
+      - 3306:3306
+volumes:
+  data-volume:
+```
+
+Copiamos el fichero *docker-compose.yml* y lo llamamos *compose-wp-mysql.yml*
+
+```console
+$ cp docker-compose.yml compose-wp-mysql.yml
+```
+
+Además le vamos a cambiar el nombre del proyecto para que no sea *compose-wp-mysql*, le vamos a llamar *pr1*
+
+```console
+$ sudo docker-compose -f compose-wp-mysql.yml -p pr1 up -d
+
+Creating network "pr1_default" with the default driver
+Creating pr1_dbserver_1 ... done
+Creating pr1_wordpress_1 ... done
+```
+
+Vemos que ahora el nombre de la red y de los contenedores empieza por *pr1* en vez del nombre del diretorio
+
+Si hago un `docker ps`
+
+```console
+$ sudo docker ps
+
+CONTAINER ID   IMAGE       COMMAND                  CREATED         STATUS         PORTS                               NAMES
+806cfc1a3564   wordpress   "docker-entrypoint.s…"   2 minutes ago   Up 2 minutes   0.0.0.0:80->80/tcp                  pr1_wordpress_1
+29b7da3e431e   mysql:5.7   "docker-entrypoint.s…"   2 minutes ago   Up 2 minutes   0.0.0.0:3306->3306/tcp, 33060/tcp   pr1_dbserver_1
+```
+
+Vemos que los tenemos
+
+Pero si hago un `docker-compose ps`
+
+```console
+$ sudo docker-compose ps
+
+Name   Command   State   Ports
+------------------------------
+```
+
+Vemos que no aparecen, y eso es porque siempre busca por el nombre del directorio donde me encuentro.
+
+Entonces tendremos que añadir `-p pr1` para que los encuentre
+
+```console
+$ sudo docker-compose -p pr1 ps
+
+     Name                  Command             State             Ports          
+--------------------------------------------------------------------------------
+pr1_dbserver_1    docker-entrypoint.sh         Up      0.0.0.0:3306->3306/tcp,  
+                  mysqld                               33060/tcp                
+pr1_wordpress_1   docker-entrypoint.sh apach   Up      0.0.0.0:80->80/tcp       
+                  ...
+```
+
+Ya sí aparecen
+
+Si miro los volúmenes
+
+```console
+$ sudo docker volume ls
+
+DRIVER    VOLUME NAME
+local     05acd8b13027dbec0aa9c5e1864c59b5e34155f4ad142a7bd484807cbfee2d91
+local     9fe6be09365a4f01f50f23658dbd3febfceb388c33342b7d42f3c45e83ebd9a8
+local     19a6732da03215a3aa9635a15ba30fcb2fcf23a9698d4a2482d966ba416272c1
+local     1530b5096c571859951461f133899b528630d9b3a03341f0a7681ae6f8d7903e
+local     1530ffda9e1448b8d52a20d5198e9378c2e901d3d20dc87d6715b13372e948b5
+local     b5a46c53d3d3ff96ebe8999ccf3a7f3ab96f1eaba152171d9bc29b851442548d
+local     d9a5fe1fca448f4dedcc7d9ad422527736af83400869e85c343ba8f7ce3e60ca
+local     da90044befaa0aeed27fa48be7f2e3cf0d833d883635aa9b94ca75b1f79dbab0
+local     e141bfca5df9c8c73d5bb2f290d3b07a4a348d2a4d175e3a4d09961eae218040
+local     f12ec79982c3128321aee0bc53fa9dcdc78f33b77aaa37f4e24b044bb883222b
+local     pr1_data-volume
+```
+
+Y vemos que el nombre también empieza por *pr1*
