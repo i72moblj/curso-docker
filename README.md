@@ -74,6 +74,7 @@
   - [6.5 Docker Compose enlazar contenedores, puertos y variables](##-6.5-Docker-Compose-enlazar-contenedores,-puertos-y-variables)
   - [6.6 Diversos comandos de Docker Compose](##-6.6-Diversos-comandos-de-Docker-Compose)
   - [6.7 Volúmenes en Docker Compose](##-6.7-Volúmenes-en-Docker-Compose)
+  - [6.8 Redes en Docker Compose](##-6.8-Redes-en-Docker-Compose)
 
 # SECCIÓN 1: Introducción al curso
 
@@ -8286,3 +8287,81 @@ local     d9a5fe1fca448f4dedcc7d9ad422527736af83400869e85c343ba8f7ce3e60ca
 Vemos que ya no están.
 
 Entonces vemos que la gestión de volúmenes en Docker Compose es muy similar a como se gestionan en Docker normal.
+
+## 6.8 Redes en Docker Compose
+
+Vamos a ver cómo podemos trabajar con redes con Docker Compose
+
+Como ejemplo vamos a utilizar una aplicación web con Node.js que ataca a un servidor MongoDB
+
+**Material práctico:**
+> Material práctico 01 - Docker Compose Network.zip
+
+Descargar el material práctico, que tiene todo el contenido necesario para el ejemplo y descomprimir el contenido en una carpeta que se llame *compose-network*.
+
+El contenido de la aplicación Node.js no nos interesa, nos vamos a centrar en Docker Compose.
+
+Contenido del archivo docker-compose.yml
+
+```yml
+version: '3.3'
+
+services:
+  app:
+    image: client
+    container_name: client
+    build: .
+    ports: 
+      - 80:3000
+    environment:
+      - MONGO_URI=mongodb://mongo_db/sample
+    depends_on: 
+      - db
+    networks: 
+      - net3
+  db:
+    image: mongo:3.0.15
+    container_name: mongo_db
+    volumes:
+      - ./db:/data/db
+    networks:
+      net3:
+        aliases:
+          - "mongo_db"
+        ipv4_address: 172.16.238.10
+        ipv6_address: 2001:3984:3989::10
+networks:
+  net3:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+      -
+        subnet: 172.16.238.0/24
+      -
+        subnet: 2001:3984:3989::/64
+```
+
+El docker-compose.yml va a hacer un build del Dockerfile para el contenedor que va a contener la aplicación Node.js
+
+```Dockerfile
+FROM node:8.4
+
+COPY . /app
+
+WORKDIR /app
+
+RUN ["npm", "install"]
+
+EXPOSE 3000/tcp
+
+CMD ["npm", "start"]
+```
+
+El Dockerfile lo que va a hacer es coger una imagen de node, copiar todo lo que hay en ese directorio en la carpeta /app del contenedor, se pone en esa carpeta del contenedor, instala con npm install y luego npm start.
+
+Vamos a comentar ahora el fichero docker-compose.yml
+
+Vemos que tenemos dos servicios, *app* que va a contener la aplicación cliente hecha en Node.js y *db* que va a contener la base de datos MongoDB.
+
+
