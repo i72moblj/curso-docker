@@ -8425,3 +8425,6 @@ Removing client   ... done
 Removing mongo_db ... done
 Removing network compose-network_net3
 ```
+
+**Ejercicio Práctico:**
+> Práctica 19 - Docker Compose MEAN Stack.pdf
