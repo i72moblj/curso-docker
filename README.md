@@ -8364,4 +8364,64 @@ Vamos a comentar ahora el fichero docker-compose.yml
 
 Vemos que tenemos dos servicios, *app* que va a contener la aplicación cliente hecha en Node.js y *db* que va a contener la base de datos MongoDB.
 
+Vamos a ver el servicio *app*, le decimos que vamos a crear una imagen llamada *client* y aparece una nueva claúsula, **container\_name**, que permite asignar un nombre al contenedor en vez de que utilice el nombre un nombre automático. El *build* indica que se construya la imagen *client* a partir del Dockerfile que tenemos en el directorio. O sea, que vamos a construir una imagen que se llame *client*  a partir del Dockerfile que hay en el directorio y cuando construya el contenedor, también le va a llamar *client*. Luego indica que por el puerto 80 del host va a acceder al puerto 3000 del contenedor. Y luego hay una variable de entorno llamada MONGO\_URI, que es obligatoria porque la aplicación Node.js necesita conectarse al servidor Mongo\_DB, y lo que hace es apuntar a la base de datos, es decir apunta al servidor mongo\_db/sample, y ese servidor es el nombre que tiene el servidor de la base de datos, especificado en el nombre del servicio db. Luego, **depends\_on** indica que el servicio *app* depende del servicio *db*. Y por último, **networks** le decimos que vamos a utilizar una red llamada *net3* que luego definiremos, en vez de utilizar la red personalizada que crea automáticamente Docker Compose.
 
+Ahora vamos a comentar el servicio *db*. Se utiliza una imagen a partir de una versión concreta de MongoDB, vamos a llamar al contenedor *mongo\_db* y dentro del directorio donde nos encontramos vamos a crear un directorio llamado */db* que va a estar mapeado con el directorio */data/db* del contenedor. Y el apartado **network** además de poner *net3*, vamos a pasar más propiedades, por ejemplo **aliases**, que es un nombre alternativo que podemos usar para este servicio dentro de esta red. Pueden aparecer más de un nombre, por ejemplo, *mongo\_db* y *mongo\_server*. Luego le vamos a poner una IP fija para ipv4 y para ipv6.
+
+Entonces los dos servicios van a utilizar la red *net3*, el servicio *app* con la configuración por defecto y el servicio *db* definiendo una serie de propiedades concretas.
+
+Y en el bloque **network**, es donde configuramos la red *net3* si es necesario. Normalmente con poner sólo *net3* es suficiente, la crea de manera automática,  pero vamos a ver algunas opciones. Por ejemplo, el **driver**, en este caso bridge. Luego aparece la propiedad **ipam** para configurar las subredes de ipv4 y de ipv6, y tenemos que definir una numeración que sea correcta. El driver utilizamos el default. La numeración tiene que coincidir con la que se ha puesto en el servidor MongoDB.
+
+Vamos a lanzar el Docker Compose y va a tener que crear una red, el mongo\_db, y los volúmenes necesarios.
+
+```console
+$ sudo docker-compose up -d
+
+Creating network "compose-network_net3" with driver "bridge"
+Creating mongo_db ... done
+Creating client   ... done
+```
+
+Vamos a ver las redes
+
+```console
+$ sudo docker network ls
+
+NETWORK ID     NAME                   DRIVER    SCOPE
+8bda57355668   bridge                 bridge    local
+a56d29772b45   compose-link_default   bridge    local
+5dc8bd4a71ac   compose-network_net3   bridge    local
+3a20f1d565d9   development_default    bridge    local
+774c8fbbcfaf   host                   host      local
+f79b96876cfa   none                   null      local
+5d6cede6837c   pr_nginx_default       bridge    local
+```
+
+Vemos que está la red *compose-network\_net3* en vez de *compose-network\_default*.
+
+Vamos a ver los servicios
+
+```console
+$ sudo docker-compose ps
+
+  Name               Command              State     Ports
+---------------------------------------------------------------------
+client     npm start                     Up      0.0.0.0:80->3000/tcp          
+mongo_db   docker-entrypoint.sh mongod   Up      27017/tcp
+```
+
+Vemos que los servicios están arrancados, el *client* que escucha por el 80 y el *mongo\_db* que escucha por el 27017.
+
+Vamso a acceder para comprobar que funciona
+
+[https://localhost/](https://localhost/)
+
+Vamos a hacer un *down* para para los servicios y eliminar los componentes que hemos ido creando
+
+```console
+$ sudo docker-compose down
+
+Removing client   ... done
+Removing mongo_db ... done
+Removing network compose-network_net3
+```
