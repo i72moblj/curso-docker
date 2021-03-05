@@ -4,7 +4,7 @@
 
 # Tabla de contenidos <!-- omit in toc -->
 
-- [SECCIÓN 1: Introducción al curso](#SECCIÓN-1-Introducción-al-curso)
+- [SECCIÓN 1: Introducción al curso](#section-1)
   - [1.1 Introducción al curso](#1.1-Introducción-al-curso)
   - [1.2 Introducción a Docker](#1.2-Introducción-a-Docker)
   - [1.3 Diferencia con máquinas virtuales](#1.3-Diferencia-con-máquinas-virtuales)
@@ -77,7 +77,9 @@
   - [6.8 Redes en Docker Compose](##-6.8-Redes-en-Docker-Compose)
   - [6.9 Cambiar nombre del fichero Compose](## 6.9 Cambiar nombre del fichero Compose)
 
+<a name="section-1">
 # SECCIÓN 1: Introducción al curso
+</a>
 
 ## 1.1 Introducción al curso
 
