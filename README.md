@@ -5,7 +5,7 @@
 # Tabla de contenidos <!-- omit in toc -->
 
 - [SECCIÓN 1: Introducción al curso](#section-1)
-  - [1.1 Introducción al curso](#1.1-Introducción-al-curso)
+  - [1.1 Introducción al curso](#section-1-1)
   - [1.2 Introducción a Docker](#1.2-Introducción-a-Docker)
   - [1.3 Diferencia con máquinas virtuales](#1.3-Diferencia-con-máquinas-virtuales)
   - [1.4 Versiones de Docker](#1.4-Versiones-de-Docker)
@@ -77,10 +77,10 @@
   - [6.8 Redes en Docker Compose](##-6.8-Redes-en-Docker-Compose)
   - [6.9 Cambiar nombre del fichero Compose](## 6.9 Cambiar nombre del fichero Compose)
 
-<a name="section-1">
+<a name="section-1"></a>
 # SECCIÓN 1: Introducción al curso
-</a>
 
+<a name="section-1-1"></a>
 ## 1.1 Introducción al curso
 
 En este curso vamos a ver todo lo relacionado con la tecnología Docker, desde las bases hasta la parte de *clustering* con Docker Swarm y la parte de KUBERNETES, qué es y cómo se integra con Docker.
